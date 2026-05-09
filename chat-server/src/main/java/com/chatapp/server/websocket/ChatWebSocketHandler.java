@@ -7,11 +7,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Controller;
 
+import java.security.Principal;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,11 +27,16 @@ public class ChatWebSocketHandler {
 
     private final UserService userService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final SimpUserRegistry userRegistry;
     private final Set<String> connectedUsers = ConcurrentHashMap.newKeySet();
+    // Map username to their session ID for direct messaging
+    private final Map<String, String> userSessions = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(UserService userService, SimpMessagingTemplate messagingTemplate) {
+    public ChatWebSocketHandler(UserService userService, SimpMessagingTemplate messagingTemplate,
+                                 SimpUserRegistry userRegistry) {
         this.userService = userService;
         this.messagingTemplate = messagingTemplate;
+        this.userRegistry = userRegistry;
     }
 
     /**
@@ -52,10 +59,29 @@ public class ChatWebSocketHandler {
 
     private void handleTextMessage(TextMessage message, SimpMessageHeaderAccessor headerAccessor) {
         String sender = message.getSender();
+        String recipient = message.getRecipient();
 
-        // Broadcast to all users
-        messagingTemplate.convertAndSend("/topic/messages", message);
-        logger.info("Broadcast message from {}: {}", sender, message.getContent());
+        if (recipient != null && !recipient.isEmpty()) {
+            // P2P message - send only to specific recipient
+            // Store message ID for identification
+            String messageId = sender + "_" + System.currentTimeMillis();
+            message.setMessageId(messageId);
+
+            // Use user registry to find the recipient's session and send directly
+            // The recipient subscribes to /user/{username}/queue/messages
+            // But since convertAndSendToUser requires a Principal, we use convertAndSend to a user-specific topic
+            String recipientTopic = "/topic/user/" + recipient + "/messages";
+            String senderTopic = "/topic/user/" + sender + "/messages";
+
+            messagingTemplate.convertAndSend(recipientTopic, message);
+            messagingTemplate.convertAndSend(senderTopic, message);
+            logger.info("P2P message from {} to {} via topics: recipient={}, sender={}",
+                sender, recipient, recipientTopic, senderTopic);
+        } else {
+            // Broadcast to all users
+            messagingTemplate.convertAndSend("/topic/messages", message);
+            logger.info("Broadcast message from {}: {}", sender, message.getContent());
+        }
     }
 
     private void handleLoginMessage(LoginRequest loginRequest, SimpMessageHeaderAccessor headerAccessor) {
@@ -65,9 +91,21 @@ public class ChatWebSocketHandler {
         var validatedUser = userService.validateCredentials(username, password);
 
         if (validatedUser.isPresent()) {
-            // Store username in session
+            // Store username in session attributes
             headerAccessor.getSessionAttributes().put("username", username);
             connectedUsers.add(username);
+
+            // Store session ID for direct messaging
+            String sessionId = headerAccessor.getSessionId();
+            if (sessionId != null) {
+                userSessions.put(username, sessionId);
+            }
+
+            // Set the user principal so convertAndSendToUser works
+            // The SimpMessageHeaderAccessor handles setting the user principal from session attributes
+            // We need to create a Principal and set it
+            Principal userPrincipal = new ChatUserPrincipal(username);
+            headerAccessor.setUser(userPrincipal);
 
             // Send success response
             LoginResponse response = new LoginResponse(true, "Login successful", username);
@@ -79,12 +117,14 @@ public class ChatWebSocketHandler {
                 logger.error("Error serializing login response", e);
             }
 
-            // Notify others
-            SystemMessage systemMsg = new SystemMessage(
-                username + " joined the chat",
-                SystemMessage.SystemMessageType.USER_JOINED
-            );
-            messagingTemplate.convertAndSend("/topic/messages", systemMsg);
+            // Notify others (only if not the first user)
+            if (connectedUsers.size() > 1) {
+                SystemMessage systemMsg = new SystemMessage(
+                    username + " joined the chat",
+                    SystemMessage.SystemMessageType.USER_JOINED
+                );
+                messagingTemplate.convertAndSend("/topic/messages", systemMsg);
+            }
 
             // Send updated user list
             broadcastUserList();
@@ -112,5 +152,21 @@ public class ChatWebSocketHandler {
      */
     public int getConnectedUsersCount() {
         return connectedUsers.size();
+    }
+
+    /**
+     * Simple Principal implementation for WebSocket users.
+     */
+    private static class ChatUserPrincipal implements Principal {
+        private final String name;
+
+        public ChatUserPrincipal(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
     }
 }

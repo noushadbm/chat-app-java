@@ -69,7 +69,9 @@ A multi-user chat application where users can connect via a JavaFX GUI client an
   "timestamp": 1234567890,
   "sender": "username",
   "content": "message text",
-  "messageType": "login"
+  "recipient": "target_username",
+  "messageId": "unique_id",
+  "messageType": "text"
 }
 ```
 
@@ -119,6 +121,25 @@ A multi-user chat application where users can connect via a JavaFX GUI client an
 | `/topic/messages` | Broadcast messages |
 | `/topic/login` | Login responses |
 | `/topic/users` | User list updates |
+| `/user/queue/messages` | Personal queue for P2P messages |
+
+**P2P Message Flow:**
+```
+1. Client connects with username header in STOMP CONNECT frame
+2. Server StompChannelInterceptor sets user Principal from username header
+3. User selects peer from sidebar
+4. Client switches to P2P chat mode
+5. User types message and sends
+6. Client sends TextMessage with recipient field set
+7. Server routes to /user/{recipient}/queue/messages
+8. Recipient receives message on their personal queue
+9. Recipient sees unread count in sidebar if not viewing that chat
+```
+
+**STOMP Headers for P2P:**
+- CONNECT frame must include `username` header
+- P2P messages use `/user/{username}/queue/messages` destination
+- `convertAndSendToUser()` requires user Principal to be set
 
 **Database Schema:**
 ```sql
@@ -176,9 +197,11 @@ CREATE TABLE user (
    - Size: 400x300 pixels
 
 2. **Chat Screen**
+   - Top: Chat target label (shows "Group Chat" or "Chat with: [username]")
    - Left panel: Message list (scrollable)
-   - Right panel: User list sidebar
+   - Right panel: User list sidebar with click-to-chat hint
    - Bottom: Message input + Send button
+   - "Back" button appears when in P2P mode
    - Size: 800x600 pixels (minimum: 600x400)
 
 ---
@@ -214,7 +237,19 @@ CREATE TABLE user (
 | System Notifications | User join/leave messages |
 | Disconnect | Clean connection shutdown |
 
-### 4.4 Real-time Features
+### 4.4 Peer-to-Peer Chat (Client/Server)
+
+| Feature | Description |
+|---------|-------------|
+| Select Peer | Click on user in sidebar to start P2P chat |
+| P2P Messaging | Send private messages to specific user |
+| P2P Indicator | Header shows "Chat with: [username]" in P2P mode |
+| Unread Count | User list shows unread message count (e.g., "user (3)") |
+| Message Storage | P2P messages stored per conversation |
+| Back to Group | Button to return to broadcast chat |
+| Auto-switch | Incoming P2P messages shown if currently viewing that chat |
+
+### 4.5 Real-time Features
 
 | Feature | Description |
 |---------|-------------|

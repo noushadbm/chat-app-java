@@ -65,7 +65,14 @@ public class ChatStompClient implements StompSessionHandler {
             WebSocketClient webSocketClient = new StandardWebSocketClient();
             WebSocketStompClient stompClient = new WebSocketStompClient(webSocketClient);
 
-            stompClient.connect(serverUrl, this);
+            // Use STOMP standard headers (login/passcode) for user identification
+            StompHeaders connectHeaders = new StompHeaders();
+            // Use native headers which are sent as custom headers in CONNECT frame
+            connectHeaders.add("username", username);
+            connectHeaders.add("password", password);
+
+            System.out.println("Connecting with headers: username=" + username);
+            stompClient.connect(serverUrl, this, connectHeaders);
         } catch (Exception e) {
             e.printStackTrace();
             Platform.runLater(() -> {
@@ -83,11 +90,15 @@ public class ChatStompClient implements StompSessionHandler {
         // Subscribe to login response topic
         session.subscribe("/topic/login", this);
 
-        // Subscribe to messages
+        // Subscribe to broadcast messages
         session.subscribe("/topic/messages", this);
 
         // Subscribe to user list updates
         session.subscribe("/topic/users", this);
+
+        // Subscribe to personal P2P messages (user-specific topic)
+        // Server sends P2P messages to /topic/user/{username}/messages
+        session.subscribe("/topic/user/" + username + "/messages", this);
 
         // Send login request as bytes
         try {
@@ -173,9 +184,21 @@ public class ChatStompClient implements StompSessionHandler {
      * Send a text message.
      */
     public void sendTextMessage(String text) {
+        sendTextMessage(text, null);
+    }
+
+    /**
+     * Send a text message to a specific recipient (P2P) or broadcast.
+     */
+    public void sendTextMessage(String text, String recipient) {
         if (stompSession != null && stompSession.isConnected()) {
             try {
-                TextMessage textMessage = new TextMessage(username, text);
+                TextMessage textMessage;
+                if (recipient != null && !recipient.isEmpty()) {
+                    textMessage = new TextMessage(username, text, recipient);
+                } else {
+                    textMessage = new TextMessage(username, text);
+                }
                 String json = MessageSerializer.serialize(textMessage);
                 byte[] payload = json.getBytes(StandardCharsets.UTF_8);
                 stompSession.send("/app/chat", payload);

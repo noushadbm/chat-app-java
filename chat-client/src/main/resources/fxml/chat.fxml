@@ -15,6 +15,12 @@
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
 
+            <!-- Chat Target Header -->
+            <HBox spacing="10" styleClass="chat-header">
+                <Label fx:id="chatTargetLabel" text="Group Chat" styleClass="chat-target-label"/>
+                <Button fx:id="backButton" text="← Group Chat" onAction="#handleBackToGroup" styleClass="back-button" managed="false" visible="false"/>
+            </HBox>
+
             <!-- Messages -->
             <ListView fx:id="messageList" VBox.vgrow="ALWAYS" styleClass="message-list"/>
 
@@ -33,6 +39,9 @@
             </padding>
 
             <Label text="Online Users" styleClass="sidebar-title"/>
+
+            <!-- Click hint -->
+            <Label text="(Click to chat)" styleClass="hint-label" />
 
             <ListView fx:id="userListView" VBox.vgrow="ALWAYS" styleClass="user-list"/>
 

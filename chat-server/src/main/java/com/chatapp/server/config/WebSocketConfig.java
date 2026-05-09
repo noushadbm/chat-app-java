@@ -13,18 +13,32 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private final StompChannelInterceptor stompChannelInterceptor;
+
+    public WebSocketConfig(StompChannelInterceptor stompChannelInterceptor) {
+        this.stompChannelInterceptor = stompChannelInterceptor;
+    }
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Enable simple in-memory message broker
-        config.enableSimpleBroker("/topic", "/queue");
+        // Enable simple in-memory message broker with user destination support
+        config.enableSimpleBroker("/topic", "/queue", "/user");
         // Prefix for messages from clients
         config.setApplicationDestinationPrefixes("/app");
+        // Prefix for user-specific destinations
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // WebSocket endpoint
+        // WebSocket endpoint with interceptors
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns("*")
+                .addInterceptors(new UsernameHandshakeInterceptor());
+    }
+
+    @Override
+    public void configureClientInboundChannel(org.springframework.messaging.simp.config.ChannelRegistration registration) {
+        registration.interceptors(stompChannelInterceptor);
     }
 }

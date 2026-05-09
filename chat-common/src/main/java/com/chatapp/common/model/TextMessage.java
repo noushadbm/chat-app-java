@@ -11,6 +11,7 @@ public class TextMessage extends ChatMessage {
     private String sender;
     private String content;
     private String recipient; // null for broadcast
+    private String messageId; // Optional ID for message identification
 
     public TextMessage() {
         super();
@@ -56,5 +57,13 @@ public class TextMessage extends ChatMessage {
 
     public void setRecipient(String recipient) {
         this.recipient = recipient;
+    }
+
+    public String getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
     }
 }
