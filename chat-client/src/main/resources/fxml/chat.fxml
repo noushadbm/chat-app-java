@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<SplitPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.chatapp.client.controller.ChatController"
+           dividerPositions="0.75" styleClass="chat-container">
+
+    <items>
+        <!-- Chat Area -->
+        <VBox spacing="10" styleClass="chat-area">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- Messages -->
+            <ListView fx:id="messageList" VBox.vgrow="ALWAYS" styleClass="message-list"/>
+
+            <!-- Input Area -->
+            <HBox spacing="10" styleClass="input-area">
+                <TextField fx:id="messageField" onKeyPressed="#handleKeyPressed"
+                           promptText="Type a message..." HBox.hgrow="ALWAYS"/>
+                <Button text="Send" onAction="#handleSend" styleClass="send-button" prefWidth="80"/>
+            </HBox>
+        </VBox>
+
+        <!-- User List Sidebar -->
+        <VBox spacing="5" styleClass="sidebar" minWidth="150">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <Label text="Online Users" styleClass="sidebar-title"/>
+
+            <ListView fx:id="userListView" VBox.vgrow="ALWAYS" styleClass="user-list"/>
+
+            <Button text="Disconnect" onAction="#handleDisconnect" styleClass="disconnect-button"/>
+        </VBox>
+    </items>
+</SplitPane>

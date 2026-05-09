@@ -1,0 +1,2 @@
+I want to develop a chat application using java. There will be a server app(running in linux) and client GUI application running in Windows/Mac/Linux. Better to use Java 21 with maven. There should be a we based interface to create/manage chat users (Should be able to create user with username and password). I would like JavaFx for GUI app. Use SQLite as embedded DB. 
+Initialize this project for future reference and ask me any queries if you have any.
