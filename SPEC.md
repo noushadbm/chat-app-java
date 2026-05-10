@@ -243,8 +243,8 @@ CREATE TABLE user (
 |---------|-------------|
 | Select Peer | Click on user in sidebar to start P2P chat |
 | P2P Messaging | Send private messages to specific user |
-| P2P Indicator | Header shows "Chat with: [username]" in P2P mode |
-| Unread Count | User list shows unread message count (e.g., "user (3)") |
+| P2P Indicator | Header shows "Group Chat" or "Chat with: [username]" |
+| Unread Count | User list shows unread count in red bold (e.g., "user (3)") |
 | Message Storage | P2P messages stored per conversation |
 | Back to Group | Button to return to broadcast chat |
 | Auto-switch | Incoming P2P messages shown if currently viewing that chat |

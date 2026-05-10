@@ -48,6 +48,8 @@ public class ChatController {
     private ChatStompClient stompClient;
     private final ObservableList<MessageItem> messages = FXCollections.observableArrayList();
     private final ObservableList<String> users = FXCollections.observableArrayList();
+    // Store group chat messages persistently
+    private final ObservableList<MessageItem> groupMessages = FXCollections.observableArrayList();
 
     // Current chat mode: null = broadcast, "all" = broadcast, or username = P2P
     private String currentChatTarget = "all";
@@ -150,10 +152,16 @@ public class ChatController {
                 messageList.scrollTo(messages.size() - 1);
             }
         } else {
-            // Broadcast message - only show in broadcast mode
+            // Broadcast message
+            String type = sender.equals(username) ? "own" : "text";
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+            MessageItem item = new MessageItem(sender, message.getContent(), timestamp, type);
+            groupMessages.add(item);
+
+            // Only show in UI if currently viewing group chat
             if ("all".equals(currentChatTarget)) {
-                String type = sender.equals(username) ? "own" : "text";
-                addMessage(sender, message.getContent(), type);
+                messages.add(item);
+                messageList.scrollTo(messages.size() - 1);
             }
         }
     }
@@ -204,7 +212,8 @@ public class ChatController {
         messages.clear();
 
         if ("all".equals(target)) {
-            // Broadcast chat - no special messages to load
+            // Load group chat messages
+            messages.addAll(groupMessages);
             if (backButton != null) {
                 backButton.setVisible(false);
                 backButton.setManaged(false);
@@ -223,6 +232,11 @@ public class ChatController {
                 backButton.setVisible(true);
                 backButton.setManaged(true);
             }
+        }
+
+        // Scroll to bottom of the messages
+        if (!messages.isEmpty()) {
+            messageList.scrollTo(messages.size() - 1);
         }
 
         updateChatTargetLabel();

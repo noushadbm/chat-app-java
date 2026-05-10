@@ -99,6 +99,18 @@
     -fx-border-width: 0 0 0 1;
 }
 
+.chat-header {
+    -fx-background-color: #e9ecef;
+    -fx-padding: 8 10 8 10;
+    -fx-alignment: center-left;
+}
+
+.chat-header .chat-target-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333;
+}
+
 .sidebar-title {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
@@ -118,6 +130,47 @@
 
 .user-list .list-cell:hover {
     -fx-background-color: #e9ecef;
+}
+
+.user-unread {
+    -fx-text-fill: #dc3545;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.user-unread .text {
+    -fx-strikethrough: false;
+}
+
+/* Highlight selected user */
+.user-list .list-cell:selected {
+    -fx-background-color: #007bff;
+    -fx-text-fill: white;
+}
+
+.hint-label {
+    -fx-font-size: 10px;
+    -fx-text-fill: #888;
+    -fx-font-style: italic;
+}
+
+.chat-target-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333;
+}
+
+.back-button {
+    -fx-background-color: #6c757d;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-padding: 4 8 4 8;
+    -fx-cursor: hand;
+    -fx-background-radius: 4;
+}
+
+.back-button:hover {
+    -fx-background-color: #545b62;
 }
 
 .disconnect-button {
