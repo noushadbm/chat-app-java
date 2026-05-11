@@ -205,8 +205,8 @@ CREATE TABLE user (
    - Size: 800x600 pixels (minimum: 600x400)
 
 **Message Bubble Design:**
-- **Own messages**: Blue background, right-aligned, sender name, content, timestamp
-- **Other messages**: White background with gray border, left-aligned, sender name, content, timestamp
+- **Own messages**: Blue background, right-aligned using `BorderPane.setRight()`, sender name, content, timestamp
+- **Other messages**: White background with gray border, left-aligned using `BorderPane.setLeft()`, sender name, content, timestamp
 - **System messages**: Italic gray text, centered, no bubble
 
 ---
