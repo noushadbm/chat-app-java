@@ -198,11 +198,16 @@ CREATE TABLE user (
 
 2. **Chat Screen**
    - Top: Chat target label (shows "Group Chat" or "Chat with: [username]")
-   - Left panel: Message list (scrollable)
+   - Middle: Message area with scrollable message bubbles
    - Right panel: User list sidebar with click-to-chat hint
    - Bottom: Message input + Send button
    - "Back" button appears when in P2P mode
    - Size: 800x600 pixels (minimum: 600x400)
+
+**Message Bubble Design:**
+- **Own messages**: Blue background, right-aligned, sender name, content, timestamp
+- **Other messages**: White background with gray border, left-aligned, sender name, content, timestamp
+- **System messages**: Italic gray text, centered, no bubble
 
 ---
 

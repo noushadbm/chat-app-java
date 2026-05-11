@@ -29,34 +29,120 @@
     -fx-background-color: #fff;
 }
 
-/* Message List */
-.message-list {
-    -fx-background-color: #fafafa;
+/* Message Area */
+.message-scroll-pane {
+    -fx-background-color: #f5f5f5;
     -fx-border-color: #e0e0e0;
     -fx-border-width: 1;
 }
 
-.message-list .list-cell {
-    -fx-padding: 8 10 8 10;
-    -fx-background-color: transparent;
+.message-scroll-pane .scroll-bar:vertical {
+    -fx-pref-width: 10;
 }
 
-.message-list .list-cell:hover {
+.message-container {
     -fx-background-color: #f5f5f5;
+    -fx-padding: 10;
 }
 
-.message-own {
-    -fx-text-fill: #007bff;
+/* Message Bubbles */
+.message-container {
+    -fx-background-color: #f5f5f5;
+    -fx-padding: 10;
+}
+
+.message-bubble {
+    -fx-background-radius: 15;
+    -fx-border-radius: 15;
+    -fx-padding: 8 12 8 12;
+    -fx-max-width: 400;
+    -fx-alignment: top-left;
+}
+
+.message-bubble-own {
+    -fx-background-color: #007bff;
+    -fx-text-fill: white;
+}
+
+.message-bubble-own .message-sender {
+    -fx-text-fill: #e6f0ff;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
 }
 
-.message-other {
-    -fx-text-fill: #333;
+.message-bubble-own .message-content {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
 }
 
-.message-system {
+.message-bubble-own .message-time {
+    -fx-text-fill: #cce0ff;
+    -fx-font-size: 10px;
+    -fx-alignment: bottom-right;
+}
+
+.message-bubble-other {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1;
+}
+
+.message-bubble-other .message-sender {
+    -fx-text-fill: #333;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.message-bubble-other .message-content {
+    -fx-text-fill: #333;
+    -fx-font-size: 14px;
+}
+
+.message-bubble-other .message-time {
     -fx-text-fill: #888;
+    -fx-font-size: 10px;
+    -fx-alignment: bottom-right;
+}
+
+.message-bubble-system {
+    -fx-background-color: transparent;
+}
+
+.message-bubble-system .label {
+    -fx-text-fill: #888;
+    -fx-font-size: 12px;
     -fx-font-style: italic;
+}
+
+/* StackPane and BorderPane for aligned messages */
+StackPane, BorderPane {
+    -fx-background-color: #f5f5f5;
+}
+
+BorderPane {
+    -fx-padding: 5 10 5 10;
+}
+
+BorderPane .message-bubble-own {
+    -fx-alignment: center-right;
+}
+
+BorderPane .message-bubble-other {
+    -fx-alignment: center-left;
+}
+
+.message-sender {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.message-content {
+    -fx-font-size: 14px;
+}
+
+.message-time {
+    -fx-font-size: 10px;
+    -fx-text-fill: #888;
 }
 
 /* Input Area */

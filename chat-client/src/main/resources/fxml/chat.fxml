@@ -21,8 +21,12 @@
                 <Button fx:id="backButton" text="← Group Chat" onAction="#handleBackToGroup" styleClass="back-button" managed="false" visible="false"/>
             </HBox>
 
-            <!-- Messages -->
-            <ListView fx:id="messageList" VBox.vgrow="ALWAYS" styleClass="message-list"/>
+            <!-- Messages ScrollPane with VBox -->
+            <ScrollPane fx:id="messageScrollPane" VBox.vgrow="ALWAYS" styleClass="message-scroll-pane">
+                <content>
+                    <VBox fx:id="messageContainer" spacing="8" styleClass="message-container"/>
+                </content>
+            </ScrollPane>
 
             <!-- Input Area -->
             <HBox spacing="10" styleClass="input-area">

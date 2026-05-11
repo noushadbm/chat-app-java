@@ -10,13 +10,18 @@ import com.chatapp.common.model.UserListMessage;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Button;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -27,9 +32,6 @@ import java.util.Map;
  * Controller for the main chat view.
  */
 public class ChatController {
-
-    @FXML
-    private ListView<MessageItem> messageList;
 
     @FXML
     private TextField messageField;
@@ -43,15 +45,20 @@ public class ChatController {
     @FXML
     private Button backButton;
 
+    @FXML
+    private VBox messageContainer;
+
+    @FXML
+    private ScrollPane messageScrollPane;
+
     private String username;
     private String password; // Store for reconnection
     private ChatStompClient stompClient;
-    private final ObservableList<MessageItem> messages = FXCollections.observableArrayList();
     private final ObservableList<String> users = FXCollections.observableArrayList();
     // Store group chat messages persistently
     private final ObservableList<MessageItem> groupMessages = FXCollections.observableArrayList();
 
-    // Current chat mode: null = broadcast, "all" = broadcast, or username = P2P
+    // Current chat mode: "all" = broadcast, or username = P2P
     private String currentChatTarget = "all";
     // Store P2P messages separately
     private final Map<String, ObservableList<MessageItem>> p2pMessages = new HashMap<>();
@@ -60,14 +67,14 @@ public class ChatController {
 
     @FXML
     private void initialize() {
-        messageList.setItems(messages);
-        messageList.setCellFactory(listView -> new MessageCellFactory());
-
         userListView.setItems(users);
         userListView.setCellFactory(listView -> new UserListCellFactory(unreadCounts));
 
         // Add click handler for user selection
         userListView.setOnMouseClicked(this::handleUserClick);
+
+        // Make ScrollPane stretch its content to full width so HBox alignment works
+        messageScrollPane.setFitToWidth(true);
     }
 
     /**
@@ -79,14 +86,14 @@ public class ChatController {
 
         // Set up message callbacks on the existing connection
         this.stompClient.setCallbacks(
-            this::handleLoginResponse,
-            this::handleTextMessage,
-            this::handleUserListMessage,
-            this::handleSystemMessage
+                this::handleLoginResponse,
+                this::handleTextMessage,
+                this::handleUserListMessage,
+                this::handleSystemMessage
         );
 
         System.out.println("Chat view initialized for: " + username);
-        addSystemMessage("Connected as " + username);
+        addSystemMessageItem("Connected as " + username);
         updateChatTargetLabel();
     }
 
@@ -102,7 +109,7 @@ public class ChatController {
      */
     private void handleLoginResponse(LoginResponse response) {
         if (response.isSuccess()) {
-            addSystemMessage("Connected to server as " + response.getUsername());
+            addSystemMessageItem("Connected to server as " + response.getUsername());
             // User list will be received via UserListMessage
             users.clear();
             // Reset to broadcast mode
@@ -126,15 +133,12 @@ public class ChatController {
 
             // Get or create the message list for this conversation
             ObservableList<MessageItem> p2pList = p2pMessages.computeIfAbsent(chatPartner,
-                k -> FXCollections.observableArrayList());
+                    k -> FXCollections.observableArrayList());
 
             String type = sender.equals(username) ? "own" : "text";
-            String displayContent = sender.equals(username)
-                ? "To " + recipient + ": " + message.getContent()
-                : "From " + sender + ": " + message.getContent();
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
             MessageItem item = new MessageItem(sender.equals(username) ? "You" : sender,
-                message.getContent(), timestamp, type);
+                    message.getContent(), timestamp, type);
 
             p2pList.add(item);
 
@@ -148,8 +152,7 @@ public class ChatController {
 
             // If currently viewing P2P chat, show the message
             if (isForCurrentChat) {
-                messages.add(item);
-                messageList.scrollTo(messages.size() - 1);
+                addMessageToUI(item);
             }
         } else {
             // Broadcast message
@@ -160,8 +163,7 @@ public class ChatController {
 
             // Only show in UI if currently viewing group chat
             if ("all".equals(currentChatTarget)) {
-                messages.add(item);
-                messageList.scrollTo(messages.size() - 1);
+                addMessageToUI(item);
             }
         }
     }
@@ -184,10 +186,7 @@ public class ChatController {
      * Handle system messages.
      */
     private void handleSystemMessage(SystemMessage message) {
-        // Only show system messages in broadcast mode
-        if ("all".equals(currentChatTarget)) {
-            addSystemMessage(message.getContent());
-        }
+        addSystemMessageItem(message.getContent());
     }
 
     /**
@@ -209,11 +208,13 @@ public class ChatController {
         }
 
         currentChatTarget = target;
-        messages.clear();
+        messageContainer.getChildren().clear();
 
         if ("all".equals(target)) {
             // Load group chat messages
-            messages.addAll(groupMessages);
+            for (MessageItem item : groupMessages) {
+                addMessageToUI(item);
+            }
             if (backButton != null) {
                 backButton.setVisible(false);
                 backButton.setManaged(false);
@@ -222,7 +223,9 @@ public class ChatController {
             // P2P chat - load existing messages
             ObservableList<MessageItem> p2pList = p2pMessages.get(target);
             if (p2pList != null) {
-                messages.addAll(p2pList);
+                for (MessageItem item : p2pList) {
+                    addMessageToUI(item);
+                }
             }
             // Clear unread count
             unreadCounts.put(target, 0);
@@ -235,11 +238,76 @@ public class ChatController {
         }
 
         // Scroll to bottom of the messages
-        if (!messages.isEmpty()) {
-            messageList.scrollTo(messages.size() - 1);
-        }
+        scrollToBottom();
 
         updateChatTargetLabel();
+    }
+
+    /**
+     * Add a message bubble to the UI.
+     */
+    private void addMessageToUI(MessageItem item) {
+        VBox messageBubble = new VBox();
+        messageBubble.setSpacing(2);
+        messageBubble.setPadding(new Insets(8, 12, 8, 12));
+
+        if ("system".equals(item.getType())) {
+            // System messages - centered, no bubble styling
+            Label systemLabel = new Label("[" + item.getTimestamp() + "] " + item.getContent());
+            systemLabel.getStyleClass().add("message-system");
+            messageBubble.getChildren().add(systemLabel);
+            messageContainer.getChildren().add(messageBubble);
+        } else {
+            // Sender label
+            Label senderLabel = new Label(item.getSender());
+            senderLabel.getStyleClass().add("message-sender");
+
+            // Content label
+            Label contentLabel = new Label(item.getContent());
+            contentLabel.setWrapText(true);
+            contentLabel.setMaxWidth(300);
+            contentLabel.getStyleClass().add("message-content");
+
+            // Time label
+            Label timeLabel = new Label(item.getTimestamp());
+            timeLabel.getStyleClass().add("message-time");
+
+            messageBubble.getChildren().addAll(senderLabel, contentLabel, timeLabel);
+
+            if ("own".equals(item.getType())) {
+                // Right-align own messages - blue bubble
+                messageBubble.getStyleClass().add("message-bubble-own");
+                // Use setRight() so the bubble actually sits on the right side
+                BorderPane container = new BorderPane();
+                container.setRight(messageBubble);
+                container.setPadding(new Insets(5, 10, 5, 10));
+                messageContainer.getChildren().add(container);
+            } else {
+                // Left-align other messages - white bubble
+                messageBubble.getStyleClass().add("message-bubble-other");
+                // Use setLeft() so the bubble sits on the left side
+                BorderPane container = new BorderPane();
+                container.setLeft(messageBubble);
+                container.setPadding(new Insets(5, 10, 5, 10));
+                messageContainer.getChildren().add(container);
+            }
+        }
+    }
+
+    /**
+     * Add a system message to the UI.
+     */
+    private void addSystemMessageItem(String content) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+        MessageItem item = new MessageItem("System", content, timestamp, "system");
+        addMessageToUI(item);
+    }
+
+    /**
+     * Scroll to the bottom of the message area.
+     */
+    private void scrollToBottom() {
+        messageScrollPane.setVvalue(1.0);
     }
 
     /**
@@ -251,27 +319,6 @@ public class ChatController {
         } else {
             chatTargetLabel.setText("Chat with: " + currentChatTarget);
         }
-    }
-
-    /**
-     * Add a message to the list.
-     */
-    private void addMessage(String sender, String content, String type) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-        MessageItem item = new MessageItem(sender, content, timestamp, type);
-        messages.add(item);
-        // Scroll to bottom
-        messageList.scrollTo(messages.size() - 1);
-    }
-
-    /**
-     * Add a system message.
-     */
-    private void addSystemMessage(String content) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-        MessageItem item = new MessageItem("System", content, timestamp, "system");
-        messages.add(item);
-        messageList.scrollTo(messages.size() - 1);
     }
 
     /**
@@ -332,41 +379,6 @@ public class ChatController {
     public void cleanup() {
         if (stompClient != null) {
             stompClient.disconnect();
-        }
-    }
-
-    /**
-     * Custom cell factory for message list.
-     */
-    private static class MessageCellFactory extends ListCell<MessageItem> {
-        @Override
-        protected void updateItem(MessageItem item, boolean empty) {
-            super.updateItem(item, empty);
-            if (empty || item == null) {
-                setText(null);
-                setGraphic(null);
-            } else {
-                String styleClass = item.getType();
-                setText(String.format("[%s] %s: %s",
-                    item.getTimestamp(),
-                    item.getSender(),
-                    item.getContent()));
-                setStyleClass(styleClass);
-            }
-        }
-
-        private void setStyleClass(String type) {
-            getStyleClass().clear();
-            switch (type) {
-                case "own":
-                    getStyleClass().add("message-own");
-                    break;
-                case "system":
-                    getStyleClass().add("message-system");
-                    break;
-                default:
-                    getStyleClass().add("message-other");
-            }
         }
     }
 
