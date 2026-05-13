@@ -134,6 +134,8 @@ A multi-user chat application where users can connect via a JavaFX GUI client an
 | `/topic/login` | Login responses |
 | `/topic/users` | User list updates |
 | `/user/queue/messages` | Personal queue for P2P messages |
+| `/topic/user/{username}/messages` | P2P message delivery |
+| `/topic/user/{username}/history` | Chat history on login (last 24h) |
 
 **P2P Message Flow:**
 ```
@@ -161,6 +163,15 @@ CREATE TABLE user (
     password VARCHAR(255) NOT NULL,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE messages (
+    id BIGINT PRIMARY KEY AUTOINCREMENT,
+    sender VARCHAR(50) NOT NULL,
+    content TEXT NOT NULL,
+    recipient VARCHAR(50),
+    timestamp BIGINT NOT NULL,
+    message_type VARCHAR(20)
 );
 ```
 
@@ -266,7 +277,17 @@ CREATE TABLE user (
 | Back to Group | Button to return to broadcast chat |
 | Auto-switch | Incoming P2P messages shown if currently viewing that chat |
 
-### 4.5 Real-time Features
+### 4.5 Chat Persistence
+
+| Feature | Description |
+|---------|-------------|
+| Message Storage | All messages (group and P2P) stored in SQLite |
+| Retention Period | Messages retained for 24 hours |
+| Auto Cleanup | Scheduled task deletes messages older than 24 hours |
+| Chat History | Users receive chat history on login via WebSocket |
+| REST API | Programmatic access to chat history |
+
+### 4.6 Real-time Features
 
 | Feature | Description |
 |---------|-------------|
@@ -292,9 +313,18 @@ CREATE TABLE user (
 ```
 1. User enters message in input field
 2. Client sends TextMessage to /app/chat
-3. Server broadcasts to /topic/messages
-4. All connected clients receive message
-5. Each client displays message in message list
+3. Server saves message to SQLite database
+4. Server broadcasts to /topic/messages
+5. All connected clients receive message
+6. Each client displays message in message list
+```
+
+### Chat History Flow
+```
+1. User logs in successfully
+2. Server retrieves messages from last 24 hours for user
+3. Server sends history messages to /topic/user/{username}/history
+4. Client displays historical messages in chat view
 ```
 
 ---
@@ -359,6 +389,9 @@ spring:
 - [ ] WebSocket endpoint available at /ws
 - [ ] STOMP messaging working
 - [ ] SQLite database created automatically
+- [ ] Messages stored in SQLite database
+- [ ] Chat history sent to user on login
+- [ ] Old messages automatically deleted after 24 hours
 
 ### Client
 - [ ] Login screen displays on launch
@@ -368,11 +401,13 @@ spring:
 - [ ] Messages from other users appear in real-time
 - [ ] User list shows connected users
 - [ ] Disconnect button works
+- [ ] Chat history loads on login
 
 ### Integration
 - [ ] Multiple clients can connect simultaneously
 - [ ] Messages broadcast to all connected clients
 - [ ] User join/leave notifications work
+- [ ] P2P messages stored and retrievable
 
 ---
 
@@ -406,13 +441,17 @@ chat-app/
 │       │   │   └── WebSocketConfig.java
 │       │   ├── controller/
 │       │   │   ├── UserApiController.java
-│       │   │   └── UserManagementController.java
+│       │   │   ├── UserManagementController.java
+│       │   │   └── ChatApiController.java
 │       │   ├── model/
-│       │   │   └── User.java
+│       │   │   ├── User.java
+│       │   │   └── Message.java
 │       │   ├── repository/
-│       │   │   └── UserRepository.java
+│       │   │   ├── UserRepository.java
+│       │   │   └── MessageRepository.java
 │       │   ├── service/
-│       │   │   └── UserService.java
+│       │   │   ├── UserService.java
+│       │   │   └── MessageService.java
 │       │   └── websocket/
 │       │       └── ChatWebSocketHandler.java
 │       └── resources/
