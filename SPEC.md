@@ -113,6 +113,18 @@ A multi-user chat application where users can connect via a JavaFX GUI client an
 - `UserRepository` - Spring Data JPA repository
 - `UserService` - Business logic with BCrypt password encoding
 
+#### Message Storage
+- `Message` JPA Entity - id, sender, content, recipient, timestamp, messageType
+- `MessageRepository` - Spring Data JPA repository for message queries
+- `MessageService` - Business logic for saving messages and cleanup
+
+#### REST API for Chat
+- `ChatApiController` - REST endpoints for chat history
+  - GET `/api/chat/history/{username}` - Get all messages for user (last 24h)
+  - GET `/api/chat/group` - Get group/broadcast messages (last 24h)
+  - GET `/api/chat/p2p/{username}` - Get P2P messages for user (last 24h)
+  - GET `/api/chat/retention` - Get message retention period
+
 **WebSocket Endpoints:**
 | Endpoint | Purpose |
 |----------|---------|
