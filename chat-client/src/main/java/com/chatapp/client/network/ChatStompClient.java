@@ -100,6 +100,9 @@ public class ChatStompClient implements StompSessionHandler {
         // Server sends P2P messages to /topic/user/{username}/messages
         session.subscribe("/topic/user/" + username + "/messages", this);
 
+        // Subscribe to chat history (messages from last 24 hours)
+        session.subscribe("/topic/user/" + username + "/history", this);
+
         // Send login request as bytes
         try {
             LoginRequest loginRequest = new LoginRequest(username, password);

@@ -2,6 +2,7 @@ package com.chatapp.server.websocket;
 
 import com.chatapp.common.MessageSerializer;
 import com.chatapp.common.model.*;
+import com.chatapp.server.service.MessageService;
 import com.chatapp.server.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,15 +28,18 @@ public class ChatWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
 
     private final UserService userService;
+    private final MessageService messageService;
     private final SimpMessagingTemplate messagingTemplate;
     private final SimpUserRegistry userRegistry;
     private final Set<String> connectedUsers = ConcurrentHashMap.newKeySet();
     // Map username to their session ID for direct messaging
     private final Map<String, String> userSessions = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(UserService userService, SimpMessagingTemplate messagingTemplate,
+    public ChatWebSocketHandler(UserService userService, MessageService messageService,
+                                 SimpMessagingTemplate messagingTemplate,
                                  SimpUserRegistry userRegistry) {
         this.userService = userService;
+        this.messageService = messageService;
         this.messagingTemplate = messagingTemplate;
         this.userRegistry = userRegistry;
     }
@@ -60,6 +65,10 @@ public class ChatWebSocketHandler {
     private void handleTextMessage(TextMessage message, SimpMessageHeaderAccessor headerAccessor) {
         String sender = message.getSender();
         String recipient = message.getRecipient();
+        long timestamp = message.getTimestamp();
+
+        // Save message to database
+        messageService.saveTextMessage(sender, message.getContent(), recipient);
 
         if (recipient != null && !recipient.isEmpty()) {
             // P2P message - send only to specific recipient
@@ -93,6 +102,7 @@ public class ChatWebSocketHandler {
         if (validatedUser.isPresent()) {
             // Store username in session attributes
             headerAccessor.getSessionAttributes().put("username", username);
+            boolean isFirstUser = connectedUsers.isEmpty();
             connectedUsers.add(username);
 
             // Store session ID for direct messaging
@@ -118,16 +128,23 @@ public class ChatWebSocketHandler {
             }
 
             // Notify others (only if not the first user)
-            if (connectedUsers.size() > 1) {
+            if (!isFirstUser) {
+                long timestamp = System.currentTimeMillis();
                 SystemMessage systemMsg = new SystemMessage(
                     username + " joined the chat",
                     SystemMessage.SystemMessageType.USER_JOINED
                 );
+                systemMsg.setTimestamp(timestamp);
+                // Save system message to database
+                messageService.saveMessage(username, username + " joined the chat", null, timestamp, "system");
                 messagingTemplate.convertAndSend("/topic/messages", systemMsg);
             }
 
             // Send updated user list
             broadcastUserList();
+
+            // Send chat history to the newly logged in user
+            sendChatHistory(username);
 
             logger.info("User logged in: {}", username);
         } else {
@@ -139,6 +156,33 @@ public class ChatWebSocketHandler {
             } catch (Exception e) {
                 logger.error("Error serializing login response", e);
             }
+        }
+    }
+
+    /**
+     * Send chat history to a user after login.
+     */
+    private void sendChatHistory(String username) {
+        try {
+            List<com.chatapp.server.model.Message> history = messageService.getChatHistory(username);
+            for (com.chatapp.server.model.Message msg : history) {
+                // Convert stored message back to TextMessage or SystemMessage
+                if ("system".equals(msg.getMessageType())) {
+                    SystemMessage systemMsg = new SystemMessage(
+                        msg.getContent(),
+                        SystemMessage.SystemMessageType.USER_JOINED
+                    );
+                    systemMsg.setTimestamp(msg.getTimestamp());
+                    messagingTemplate.convertAndSend("/topic/user/" + username + "/history", systemMsg);
+                } else {
+                    TextMessage textMsg = new TextMessage(msg.getSender(), msg.getContent(), msg.getRecipient());
+                    textMsg.setTimestamp(msg.getTimestamp());
+                    messagingTemplate.convertAndSend("/topic/user/" + username + "/history", textMsg);
+                }
+            }
+            logger.debug("Sent {} messages to chat history for user {}", history.size(), username);
+        } catch (Exception e) {
+            logger.error("Error sending chat history to user {}: {}", username, e.getMessage());
         }
     }
 
