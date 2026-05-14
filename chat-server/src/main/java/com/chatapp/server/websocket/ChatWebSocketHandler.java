@@ -152,7 +152,8 @@ public class ChatWebSocketHandler {
             LoginResponse response = new LoginResponse(false, "Invalid credentials");
             try {
                 String responseJson = MessageSerializer.serialize(response);
-                messagingTemplate.convertAndSend("/topic/errors", responseJson);
+                // Send to same topic as success response so client can receive it
+                messagingTemplate.convertAndSend("/topic/login", responseJson);
             } catch (Exception e) {
                 logger.error("Error serializing login response", e);
             }

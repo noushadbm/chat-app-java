@@ -50,7 +50,7 @@
 
             <ListView fx:id="userListView" VBox.vgrow="ALWAYS" styleClass="user-list"/>
 
-            <Button text="Disconnect" onAction="#handleDisconnect" styleClass="disconnect-button"/>
+            <Button text="Logout" onAction="#handleDisconnect" styleClass="disconnect-button"/>
         </VBox>
     </items>
 </SplitPane>

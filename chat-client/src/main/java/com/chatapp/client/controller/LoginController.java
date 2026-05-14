@@ -63,7 +63,13 @@ public class LoginController {
             System.out.println("Login successful");
             ChatClientApplication.showChatView(usernameField.getText().trim(), stompClient);
         } else {
-            showError("Login failed: " + response.getMessage());
+            // Check if it's wrong credentials
+            String errorMessage = response.getMessage();
+            if (errorMessage != null && errorMessage.toLowerCase().contains("invalid")) {
+                showError("Wrong credential");
+            } else {
+                showError("Login failed: " + errorMessage);
+            }
             if (stompClient != null) {
                 stompClient.disconnect();
             }
