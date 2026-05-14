@@ -22,7 +22,8 @@
             </HBox>
 
             <!-- Messages ScrollPane with VBox -->
-            <ScrollPane fx:id="messageScrollPane" VBox.vgrow="ALWAYS" styleClass="message-scroll-pane">
+            <ScrollPane fx:id="messageScrollPane" VBox.vgrow="ALWAYS" styleClass="message-scroll-pane"
+                        hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
                 <content>
                     <VBox fx:id="messageContainer" spacing="8" styleClass="message-container"/>
                 </content>

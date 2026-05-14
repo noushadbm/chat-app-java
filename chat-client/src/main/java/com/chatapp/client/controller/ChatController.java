@@ -22,6 +22,10 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.application.Platform;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.util.Duration;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -75,6 +79,11 @@ public class ChatController {
 
         // Make ScrollPane stretch its content to full width so HBox alignment works
         messageScrollPane.setFitToWidth(true);
+
+        // Auto-scroll when message container's children change
+        messageContainer.heightProperty().addListener((obs, oldVal, newVal) -> {
+            scrollToBottom();
+        });
     }
 
     /**
@@ -95,6 +104,9 @@ public class ChatController {
         System.out.println("Chat view initialized for: " + username);
         addSystemMessageItem("Connected as " + username);
         updateChatTargetLabel();
+
+        // Scroll to bottom when chat view opens
+        scrollToBottom();
     }
 
     /**
@@ -153,6 +165,7 @@ public class ChatController {
             // If currently viewing P2P chat, show the message
             if (isForCurrentChat) {
                 addMessageToUI(item);
+                scrollToBottom();
             }
         } else {
             // Broadcast message
@@ -164,6 +177,7 @@ public class ChatController {
             // Only show in UI if currently viewing group chat
             if ("all".equals(currentChatTarget)) {
                 addMessageToUI(item);
+                scrollToBottom();
             }
         }
     }
@@ -187,6 +201,7 @@ public class ChatController {
      */
     private void handleSystemMessage(SystemMessage message) {
         addSystemMessageItem(message.getContent());
+        scrollToBottom();
     }
 
     /**
@@ -307,7 +322,11 @@ public class ChatController {
      * Scroll to the bottom of the message area.
      */
     private void scrollToBottom() {
-        messageScrollPane.setVvalue(1.0);
+        // Use Timeline to delay scroll slightly to ensure layout is complete
+        Timeline timeline = new Timeline(new KeyFrame(Duration.millis(100), event -> {
+            messageScrollPane.setVvalue(1.0);
+        }));
+        timeline.play();
     }
 
     /**
