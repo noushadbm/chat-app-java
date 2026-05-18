@@ -142,4 +142,38 @@ public class UserService {
     public boolean usernameExists(String username) {
         return userRepository.existsByUsername(username);
     }
+
+    /**
+     * Get user by ID.
+     *
+     * @param id The user ID
+     * @return Optional containing the user if found
+     */
+    public Optional<User> getUserById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    /**
+     * Update user's display name and optionally their password.
+     *
+     * @param id The ID of the user to update
+     * @param displayName The new display name (can be null or empty to revert to username)
+     * @param newPassword The new plain text password (can be null or empty to keep current password)
+     * @return The updated user
+     * @throws IllegalArgumentException if user not found
+     */
+    public User updateUser(Long id, String displayName, String newPassword) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + id));
+
+        // Update display name
+        user.setDisplayName(displayName != null && !displayName.isEmpty() ? displayName : user.getUsername());
+
+        // Update password if provided
+        if (newPassword != null && !newPassword.isEmpty()) {
+            user.setPassword(passwordEncoder.encode(newPassword));
+        }
+
+        return userRepository.save(user);
+    }
 }

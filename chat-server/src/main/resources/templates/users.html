@@ -108,6 +108,7 @@
                     <th>Display Name</th>
                     <th>Created At</th>
                     <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -118,6 +119,9 @@
                     <td th:text="${#dates.format(user.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
                     <td th:class="${user.isActive} ? 'status-active' : 'status-inactive'"
                         th:text="${user.isActive ? 'Active' : 'Inactive'}">Active</td>
+                    <td>
+                        <a th:href="@{/users/{id}/edit(id=${user.id})}" class="btn">Edit</a>
+                    </td>
                 </tr>
                 <tr th:if="${users.empty}">
                     <td colspan="5" style="text-align: center;">No users found</td>

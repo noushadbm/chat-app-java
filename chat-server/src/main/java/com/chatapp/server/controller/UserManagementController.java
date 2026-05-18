@@ -69,9 +69,29 @@ public class UserManagementController {
      */
     @GetMapping("/users/{id}/edit")
     public String showEditForm(@PathVariable Long id, Model model) {
-        // For now, just show the form - would need findById in service
-        model.addAttribute("username", "User " + id);
-        return "user-edit";
+        User user = userService.getUserById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        model.addAttribute("user", user);
+        model.addAttribute("isEditMode", true);
+        return "user-form";
+    }
+
+    /**
+     * Update an existing user.
+     */
+    @PostMapping("/users/{id}/edit")
+    public String updateUser(@PathVariable Long id,
+                             @RequestParam(required = false) String displayName,
+                             @RequestParam(required = false) String password, Model model) {
+        try {
+            userService.updateUser(id, displayName, password);
+            return "redirect:/users?updated";
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", e.getMessage());
+            model.addAttribute("user", userService.getUserById(id).orElse(new User())); // Re-fetch user or create new for form
+            model.addAttribute("isEditMode", true);
+            return "user-form";
+        }
     }
 
     /**
