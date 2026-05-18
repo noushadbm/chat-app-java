@@ -30,12 +30,24 @@ public class UserService {
      * @return The created user
      */
     public User createUser(String username, String password) {
+        return createUser(username, password, username);
+    }
+
+    /**
+     * Create a new user with encoded password and display name.
+     *
+     * @param username The username
+     * @param password The plain text password
+     * @param displayName The display name
+     * @return The created user
+     */
+    public User createUser(String username, String password, String displayName) {
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already exists: " + username);
         }
 
         String encodedPassword = passwordEncoder.encode(password);
-        User user = new User(username, encodedPassword);
+        User user = new User(username, encodedPassword, displayName);
         return userRepository.save(user);
     }
 

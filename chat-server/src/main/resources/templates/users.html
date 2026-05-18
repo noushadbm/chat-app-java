@@ -105,6 +105,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Username</th>
+                    <th>Display Name</th>
                     <th>Created At</th>
                     <th>Status</th>
                 </tr>
@@ -113,12 +114,13 @@
                 <tr th:each="user : ${users}">
                     <td th:text="${user.id}">1</td>
                     <td th:text="${user.username}">john</td>
+                    <td th:text="${user.displayName}">John Doe</td>
                     <td th:text="${#dates.format(user.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
                     <td th:class="${user.isActive} ? 'status-active' : 'status-inactive'"
                         th:text="${user.isActive ? 'Active' : 'Inactive'}">Active</td>
                 </tr>
                 <tr th:if="${users.empty}">
-                    <td colspan="4" style="text-align: center;">No users found</td>
+                    <td colspan="5" style="text-align: center;">No users found</td>
                 </tr>
             </tbody>
         </table>

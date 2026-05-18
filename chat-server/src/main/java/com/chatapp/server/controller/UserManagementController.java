@@ -51,9 +51,11 @@ public class UserManagementController {
      * Create a new user.
      */
     @PostMapping("/users")
-    public String createUser(@RequestParam String username, @RequestParam String password, Model model) {
+    public String createUser(@RequestParam String username,
+                             @RequestParam(required = false) String displayName,
+                             @RequestParam String password, Model model) {
         try {
-            userService.createUser(username, password);
+            userService.createUser(username, password, displayName);
             return "redirect:/users?success";
         } catch (IllegalArgumentException e) {
             model.addAttribute("error", e.getMessage());

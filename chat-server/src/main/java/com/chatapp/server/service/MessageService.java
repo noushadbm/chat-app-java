@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -99,6 +100,7 @@ public class MessageService {
      * Runs every hour.
      */
     @Scheduled(fixedRate = 60 * 60 * 1000) // Every 1 hour
+    @Transactional
     public void cleanupOldMessages() {
         long cutoffTimestamp = System.currentTimeMillis() - MESSAGE_RETENTION_PERIOD;
         long deletedCount = messageRepository.deleteByTimestampLessThan(cutoffTimestamp);

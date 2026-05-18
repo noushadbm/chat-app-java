@@ -56,9 +56,12 @@ public class ChatController {
     private ScrollPane messageScrollPane;
 
     private String username;
+    private String displayName; // User's display name
     private String password; // Store for reconnection
     private ChatStompClient stompClient;
     private final ObservableList<String> users = FXCollections.observableArrayList();
+    // Store display names for other users
+    private final Map<String, String> userDisplayNames = new HashMap<>();
     // Store group chat messages persistently
     private final ObservableList<MessageItem> groupMessages = FXCollections.observableArrayList();
 
@@ -69,10 +72,20 @@ public class ChatController {
     // Store unread counts for P2P conversations
     private final Map<String, Integer> unreadCounts = new HashMap<>();
 
+    /**
+     * Get display name for a username.
+     */
+    private String getDisplayName(String username) {
+        if (username.equals(this.username)) {
+            return this.displayName != null ? this.displayName : username;
+        }
+        return userDisplayNames.getOrDefault(username, username);
+    }
+
     @FXML
     private void initialize() {
         userListView.setItems(users);
-        userListView.setCellFactory(listView -> new UserListCellFactory(unreadCounts));
+        userListView.setCellFactory(listView -> new UserListCellFactory(unreadCounts, userDisplayNames::get));
 
         // Add click handler for user selection
         userListView.setOnMouseClicked(this::handleUserClick);
@@ -121,7 +134,9 @@ public class ChatController {
      */
     private void handleLoginResponse(LoginResponse response) {
         if (response.isSuccess()) {
-            addSystemMessageItem("Connected to server as " + response.getUsername());
+            // Store display name
+            this.displayName = response.getDisplayName();
+            addSystemMessageItem("Connected to server as " + this.displayName);
             // User list will be received via UserListMessage
             users.clear();
             // Reset to broadcast mode
@@ -149,8 +164,8 @@ public class ChatController {
 
             String type = sender.equals(username) ? "own" : "text";
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-            MessageItem item = new MessageItem(sender.equals(username) ? "You" : sender,
-                    message.getContent(), timestamp, type);
+            String senderDisplayName = sender.equals(username) ? "You" : getDisplayName(sender);
+            MessageItem item = new MessageItem(senderDisplayName, message.getContent(), timestamp, type);
 
             p2pList.add(item);
 
@@ -171,7 +186,8 @@ public class ChatController {
             // Broadcast message
             String type = sender.equals(username) ? "own" : "text";
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-            MessageItem item = new MessageItem(sender, message.getContent(), timestamp, type);
+            String senderDisplayName = getDisplayName(sender);
+            MessageItem item = new MessageItem(senderDisplayName, message.getContent(), timestamp, type);
             groupMessages.add(item);
 
             // Only show in UI if currently viewing group chat
@@ -187,6 +203,10 @@ public class ChatController {
      */
     private void handleUserListMessage(UserListMessage message) {
         users.clear();
+        // Store display names
+        if (message.getDisplayNames() != null) {
+            userDisplayNames.putAll(message.getDisplayNames());
+        }
         for (String user : message.getUsers()) {
             if (!user.equals(username)) {
                 users.add(user);
@@ -336,7 +356,8 @@ public class ChatController {
         if ("all".equals(currentChatTarget)) {
             chatTargetLabel.setText("Group Chat");
         } else {
-            chatTargetLabel.setText("Chat with: " + currentChatTarget);
+            String targetDisplayName = getDisplayName(currentChatTarget);
+            chatTargetLabel.setText("Chat with: " + targetDisplayName);
         }
     }
 
@@ -402,13 +423,16 @@ public class ChatController {
     }
 
     /**
-     * Custom cell factory for user list with unread indicators.
+     * Custom cell factory for user list with unread indicators and display names.
      */
     private static class UserListCellFactory extends ListCell<String> {
         private final Map<String, Integer> unreadCounts;
+        private final java.util.function.Function<String, String> displayNameProvider;
 
-        public UserListCellFactory(Map<String, Integer> unreadCounts) {
+        public UserListCellFactory(Map<String, Integer> unreadCounts,
+                                    java.util.function.Function<String, String> displayNameProvider) {
             this.unreadCounts = unreadCounts;
+            this.displayNameProvider = displayNameProvider;
         }
 
         @Override
@@ -417,13 +441,14 @@ public class ChatController {
             if (empty || item == null) {
                 setText(null);
             } else {
+                String displayName = displayNameProvider.apply(item);
                 Integer unread = unreadCounts.get(item);
                 if (unread != null && unread > 0) {
-                    setText(item + " (" + unread + ")");
+                    setText(displayName + " (" + unread + ")");
                     getStyleClass().clear();
                     getStyleClass().add("user-unread");
                 } else {
-                    setText(item);
+                    setText(displayName);
                     getStyleClass().clear();
                 }
             }

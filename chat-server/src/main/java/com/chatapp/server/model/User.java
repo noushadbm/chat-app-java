@@ -17,6 +17,9 @@ public class User {
     @Column(unique = true, nullable = false, length = 50)
     private String username;
 
+    @Column(name = "display_name", length = 100)
+    private String displayName;
+
     @Column(nullable = false)
     private String password;
 
@@ -33,6 +36,15 @@ public class User {
 
     public User(String username, String password) {
         this.username = username;
+        this.displayName = username; // Default display name is username
+        this.password = password;
+        this.createdAt = System.currentTimeMillis();
+        this.isActive = true;
+    }
+
+    public User(String username, String password, String displayName) {
+        this.username = username;
+        this.displayName = displayName != null && !displayName.isEmpty() ? displayName : username;
         this.password = password;
         this.createdAt = System.currentTimeMillis();
         this.isActive = true;
@@ -54,6 +66,14 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 
     public String getPassword() {

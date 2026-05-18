@@ -111,6 +111,14 @@
             </div>
 
             <div class="form-group">
+                <label for="displayName">Display Name</label>
+                <input type="text" id="displayName" name="displayName"
+                       pattern=".{1,50}"
+                       title="Display name can be up to 50 characters">
+                <p class="help-text">Optional. Will use username if not provided</p>
+            </div>
+
+            <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required
                        minlength="4"

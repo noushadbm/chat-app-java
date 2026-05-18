@@ -14,6 +14,7 @@ import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,8 +118,15 @@ public class ChatWebSocketHandler {
             Principal userPrincipal = new ChatUserPrincipal(username);
             headerAccessor.setUser(userPrincipal);
 
-            // Send success response
-            LoginResponse response = new LoginResponse(true, "Login successful", username);
+            // Get user display name
+            String displayName = username;
+            var userOpt = userService.getUserByUsername(username);
+            if (userOpt.isPresent()) {
+                displayName = userOpt.get().getDisplayName();
+            }
+
+            // Send success response with display name
+            LoginResponse response = new LoginResponse(true, "Login successful", username, displayName);
             try {
                 String responseJson = MessageSerializer.serialize(response);
                 // Send to topic for login responses (client can subscribe without auth)
@@ -188,7 +196,18 @@ public class ChatWebSocketHandler {
     }
 
     private void broadcastUserList() {
-        UserListMessage userListMessage = new UserListMessage(connectedUsers.stream().toList());
+        // Get display names for all connected users
+        Map<String, String> displayNames = new HashMap<>();
+        for (String username : connectedUsers) {
+            var userOpt = userService.getUserByUsername(username);
+            if (userOpt.isPresent()) {
+                String displayName = userOpt.get().getDisplayName();
+                displayNames.put(username, displayName);
+            } else {
+                displayNames.put(username, username);
+            }
+        }
+        UserListMessage userListMessage = new UserListMessage(connectedUsers.stream().toList(), displayNames);
         messagingTemplate.convertAndSend("/topic/users", userListMessage);
     }
 

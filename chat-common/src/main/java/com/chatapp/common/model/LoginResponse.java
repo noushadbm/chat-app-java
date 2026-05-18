@@ -11,6 +11,7 @@ public class LoginResponse extends ChatMessage {
     private boolean success;
     private String message;
     private String username;
+    private String displayName;
 
     public LoginResponse() {
         super();
@@ -27,6 +28,15 @@ public class LoginResponse extends ChatMessage {
         this.success = success;
         this.message = message;
         this.username = username;
+        this.displayName = username;
+    }
+
+    public LoginResponse(boolean success, String message, String username, String displayName) {
+        super();
+        this.success = success;
+        this.message = message;
+        this.username = username;
+        this.displayName = displayName;
     }
 
     @Override
@@ -56,5 +66,13 @@ public class LoginResponse extends ChatMessage {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 }
