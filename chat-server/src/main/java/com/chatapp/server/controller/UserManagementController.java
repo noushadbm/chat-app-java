@@ -44,6 +44,7 @@ public class UserManagementController {
     @GetMapping("/users/new")
     public String showCreateForm(Model model) {
         model.addAttribute("user", new User());
+        model.addAttribute("isEditMode", false);
         return "user-form";
     }
 
