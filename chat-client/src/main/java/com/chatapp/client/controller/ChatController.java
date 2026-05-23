@@ -344,7 +344,14 @@ public class ChatController {
     private void addSystemMessageItem(String content) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
         MessageItem item = new MessageItem("System", content, timestamp, "system");
-        addMessageToUI(item);
+
+        // System messages are part of the group chat history (like broadcast text messages)
+        groupMessages.add(item);
+
+        // Only render immediately if we are currently viewing the group chat
+        if ("all".equals(currentChatTarget)) {
+            addMessageToUI(item);
+        }
     }
 
     /**

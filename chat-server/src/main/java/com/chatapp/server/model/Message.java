@@ -29,15 +29,23 @@ public class Message {
     @Column(name = "message_type", length = 20)
     private String messageType; // "text", "system"
 
+    @Column(name = "system_message_type", length = 30)
+    private String systemMessageType; // "USER_JOINED", "USER_LEFT", "GENERAL", etc. (null for text messages)
+
     public Message() {
     }
 
     public Message(String sender, String content, String recipient, Long timestamp, String messageType) {
+        this(sender, content, recipient, timestamp, messageType, null);
+    }
+
+    public Message(String sender, String content, String recipient, Long timestamp, String messageType, String systemMessageType) {
         this.sender = sender;
         this.content = content;
         this.recipient = recipient;
         this.timestamp = timestamp;
         this.messageType = messageType;
+        this.systemMessageType = systemMessageType;
     }
 
     // Getters and Setters
@@ -88,6 +96,14 @@ public class Message {
 
     public void setMessageType(String messageType) {
         this.messageType = messageType;
+    }
+
+    public String getSystemMessageType() {
+        return systemMessageType;
+    }
+
+    public void setSystemMessageType(String systemMessageType) {
+        this.systemMessageType = systemMessageType;
     }
 
     /**

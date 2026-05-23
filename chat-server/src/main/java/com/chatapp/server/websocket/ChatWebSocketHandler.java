@@ -140,16 +140,18 @@ public class ChatWebSocketHandler {
                 logger.error("Error serializing login response", e);
             }
 
-            // Notify others (only if not the first user)
+            // Always persist the "joined" event (for history)
+            long timestamp = System.currentTimeMillis();
+            String joinContent = username + " joined the chat";
+            messageService.saveMessage(username, joinContent, null, timestamp, "system", "USER_JOINED");
+
+            // Notify currently connected users (only if this is not the very first user)
             if (!isFirstUser) {
-                long timestamp = System.currentTimeMillis();
                 SystemMessage systemMsg = new SystemMessage(
-                    username + " joined the chat",
+                    joinContent,
                     SystemMessage.SystemMessageType.USER_JOINED
                 );
                 systemMsg.setTimestamp(timestamp);
-                // Save system message to database
-                messageService.saveMessage(username, username + " joined the chat", null, timestamp, "system");
                 messagingTemplate.convertAndSend("/topic/messages", systemMsg);
             }
 
@@ -182,10 +184,16 @@ public class ChatWebSocketHandler {
             for (com.chatapp.server.model.Message msg : history) {
                 // Convert stored message back to TextMessage or SystemMessage
                 if ("system".equals(msg.getMessageType())) {
-                    SystemMessage systemMsg = new SystemMessage(
-                        msg.getContent(),
-                        SystemMessage.SystemMessageType.USER_JOINED
-                    );
+                    SystemMessage.SystemMessageType sysType = SystemMessage.SystemMessageType.GENERAL;
+                    String stored = msg.getSystemMessageType();
+                    if ("USER_JOINED".equals(stored)) {
+                        sysType = SystemMessage.SystemMessageType.USER_JOINED;
+                    } else if ("USER_LEFT".equals(stored)) {
+                        sysType = SystemMessage.SystemMessageType.USER_LEFT;
+                    } else if ("SERVER_SHUTDOWN".equals(stored)) {
+                        sysType = SystemMessage.SystemMessageType.SERVER_SHUTDOWN;
+                    }
+                    SystemMessage systemMsg = new SystemMessage(msg.getContent(), sysType);
                     systemMsg.setTimestamp(msg.getTimestamp());
                     messagingTemplate.convertAndSend("/topic/user/" + username + "/history", systemMsg);
                 } else {
@@ -261,6 +269,16 @@ public class ChatWebSocketHandler {
                 StompChannelInterceptor.sessionUsers.remove(sessionId);
             }
             logger.info("User disconnected: {}", username);
+
+            // Persist and broadcast "left" system message so it appears in history for others
+            long ts = System.currentTimeMillis();
+            String leftContent = username + " left the chat";
+            messageService.saveMessage(username, leftContent, null, ts, "system", "USER_LEFT");
+
+            SystemMessage leftMsg = new SystemMessage(leftContent, SystemMessage.SystemMessageType.USER_LEFT);
+            leftMsg.setTimestamp(ts);
+            messagingTemplate.convertAndSend("/topic/messages", leftMsg);
+
             broadcastUserList();
         }
     }

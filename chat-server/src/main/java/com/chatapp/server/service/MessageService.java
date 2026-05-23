@@ -19,8 +19,8 @@ public class MessageService {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
 
-    // Keep messages for 1 day (24 hours * 60 minutes * 60 seconds * 1000 milliseconds)
-    private static final long MESSAGE_RETENTION_PERIOD = 24 * 60 * 60 * 1000L;
+    // Keep messages for 1 week (7 days * 24 hours * 60 minutes * 60 seconds * 1000 milliseconds)
+    private static final long MESSAGE_RETENTION_PERIOD = 7L * 24 * 60 * 60 * 1000L;
 
     private final MessageRepository messageRepository;
 
@@ -39,7 +39,22 @@ public class MessageService {
      * @return The saved message
      */
     public Message saveMessage(String sender, String content, String recipient, Long timestamp, String messageType) {
-        Message message = new Message(sender, content, recipient, timestamp, messageType);
+        return saveMessage(sender, content, recipient, timestamp, messageType, null);
+    }
+
+    /**
+     * Save a chat message to the database, including optional system message subtype.
+     *
+     * @param sender             The sender username
+     * @param content            The message content
+     * @param recipient          The recipient username (null for group messages)
+     * @param timestamp          The message timestamp
+     * @param messageType        The type of message (e.g., "text", "system")
+     * @param systemMessageType  The subtype for system messages (e.g. "USER_JOINED", "USER_LEFT"), null otherwise
+     * @return The saved message
+     */
+    public Message saveMessage(String sender, String content, String recipient, Long timestamp, String messageType, String systemMessageType) {
+        Message message = new Message(sender, content, recipient, timestamp, messageType, systemMessageType);
         Message savedMessage = messageRepository.save(message);
         logger.debug("Saved message from {} to {}: {}", sender, recipient != null ? recipient : "ALL", content);
         return savedMessage;
@@ -58,7 +73,7 @@ public class MessageService {
     }
 
     /**
-     * Get chat history for a user (both group and P2P messages) for the last 24 hours.
+     * Get chat history for a user (both group and P2P messages) for the last week.
      *
      * @param username The username to get history for
      * @return List of messages
@@ -69,7 +84,7 @@ public class MessageService {
     }
 
     /**
-     * Get all group messages for the last 24 hours.
+     * Get all group messages for the last week.
      *
      * @return List of group messages
      */
@@ -79,7 +94,7 @@ public class MessageService {
     }
 
     /**
-     * Get P2P messages for a user (both sent and received) for the last 24 hours.
+     * Get P2P messages for a user (both sent and received) for the last week.
      *
      * @param username The username to get messages for
      * @return List of P2P messages
@@ -96,7 +111,7 @@ public class MessageService {
     }
 
     /**
-     * Scheduled task to delete messages older than 1 day.
+     * Scheduled task to delete messages older than 1 week.
      * Runs every hour.
      */
     @Scheduled(fixedRate = 60 * 60 * 1000) // Every 1 hour
@@ -105,7 +120,7 @@ public class MessageService {
         long cutoffTimestamp = System.currentTimeMillis() - MESSAGE_RETENTION_PERIOD;
         long deletedCount = messageRepository.deleteByTimestampLessThan(cutoffTimestamp);
         if (deletedCount > 0) {
-            logger.info("Cleaned up {} old messages older than 24 hours", deletedCount);
+            logger.info("Cleaned up {} old messages older than 1 week", deletedCount);
         }
     }
 
