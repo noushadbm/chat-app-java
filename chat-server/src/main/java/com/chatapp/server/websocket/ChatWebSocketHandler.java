@@ -10,8 +10,13 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Controller;
+import org.springframework.context.event.EventListener;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+
+import com.chatapp.server.config.StompChannelInterceptor;
 
 import java.security.Principal;
 import java.util.HashMap;
@@ -196,18 +201,22 @@ public class ChatWebSocketHandler {
     }
 
     private void broadcastUserList() {
-        // Get display names for all connected users
+        // Get ALL active users from database (online + offline)
+        List<com.chatapp.server.model.User> allActiveUsers = userService.getAllActiveUsers();
+        List<String> allUsernames = allActiveUsers.stream()
+                .map(com.chatapp.server.model.User::getUsername)
+                .toList();
+
         Map<String, String> displayNames = new HashMap<>();
-        for (String username : connectedUsers) {
-            var userOpt = userService.getUserByUsername(username);
-            if (userOpt.isPresent()) {
-                String displayName = userOpt.get().getDisplayName();
-                displayNames.put(username, displayName);
-            } else {
-                displayNames.put(username, username);
-            }
+        for (com.chatapp.server.model.User user : allActiveUsers) {
+            String dn = user.getDisplayName();
+            displayNames.put(user.getUsername(), (dn != null && !dn.isEmpty()) ? dn : user.getUsername());
         }
-        UserListMessage userListMessage = new UserListMessage(connectedUsers.stream().toList(), displayNames);
+
+        // Currently connected = online
+        List<String> onlineList = connectedUsers.stream().toList();
+
+        UserListMessage userListMessage = new UserListMessage(allUsernames, displayNames, onlineList);
         messagingTemplate.convertAndSend("/topic/users", userListMessage);
     }
 
@@ -216,6 +225,44 @@ public class ChatWebSocketHandler {
      */
     public int getConnectedUsersCount() {
         return connectedUsers.size();
+    }
+
+    /**
+     * Handle WebSocket disconnect events (network drop, client close, etc.)
+     * Removes user from connected set and refreshes the user list for everyone.
+     */
+    @EventListener
+    public void handleDisconnectEvent(SessionDisconnectEvent event) {
+        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = headerAccessor.getSessionId();
+
+        String username = null;
+
+        // 1. Try principal (most reliable)
+        Principal principal = headerAccessor.getUser();
+        if (principal != null) {
+            username = principal.getName();
+        }
+
+        // 2. Try session attributes (set during CONNECT and login)
+        if (username == null) {
+            username = (String) headerAccessor.getSessionAttributes().get("username");
+        }
+
+        // 3. Fallback to the static map (for abrupt disconnects)
+        if (username == null && sessionId != null) {
+            username = StompChannelInterceptor.sessionUsers.remove(sessionId);
+        }
+
+        if (username != null) {
+            connectedUsers.remove(username);
+            userSessions.remove(username);
+            if (sessionId != null) {
+                StompChannelInterceptor.sessionUsers.remove(sessionId);
+            }
+            logger.info("User disconnected: {}", username);
+            broadcastUserList();
+        }
     }
 
     /**

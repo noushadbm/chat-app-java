@@ -71,6 +71,8 @@ public class ChatController {
     private final Map<String, ObservableList<MessageItem>> p2pMessages = new HashMap<>();
     // Store unread counts for P2P conversations
     private final Map<String, Integer> unreadCounts = new HashMap<>();
+    // Track which users are currently online (from server UserListMessage)
+    private final java.util.Set<String> onlineUsernames = new java.util.HashSet<>();
 
     /**
      * Get display name for a username.
@@ -85,7 +87,7 @@ public class ChatController {
     @FXML
     private void initialize() {
         userListView.setItems(users);
-        userListView.setCellFactory(listView -> new UserListCellFactory(unreadCounts, userDisplayNames::get));
+        userListView.setCellFactory(listView -> new UserListCellFactory(unreadCounts, userDisplayNames::get, onlineUsernames::contains));
 
         // Add click handler for user selection
         userListView.setOnMouseClicked(this::handleUserClick);
@@ -203,16 +205,23 @@ public class ChatController {
      */
     private void handleUserListMessage(UserListMessage message) {
         users.clear();
-        // Store display names
+        // Replace display names and online status with fresh data from server
+        userDisplayNames.clear();
+        onlineUsernames.clear();
+
         if (message.getDisplayNames() != null) {
             userDisplayNames.putAll(message.getDisplayNames());
         }
+        if (message.getOnlineUsers() != null) {
+            onlineUsernames.addAll(message.getOnlineUsers());
+        }
+
         for (String user : message.getUsers()) {
             if (!user.equals(username)) {
                 users.add(user);
             }
         }
-        // Refresh the user list to show updated unread counts
+        // Refresh the user list to show updated online/offline colors and unread counts
         userListView.refresh();
     }
 
@@ -423,16 +432,19 @@ public class ChatController {
     }
 
     /**
-     * Custom cell factory for user list with unread indicators and display names.
+     * Custom cell factory for user list with unread indicators, display names, and online/offline colors.
      */
     private static class UserListCellFactory extends ListCell<String> {
         private final Map<String, Integer> unreadCounts;
         private final java.util.function.Function<String, String> displayNameProvider;
+        private final java.util.function.Function<String, Boolean> isOnlineProvider;
 
         public UserListCellFactory(Map<String, Integer> unreadCounts,
-                                    java.util.function.Function<String, String> displayNameProvider) {
+                                   java.util.function.Function<String, String> displayNameProvider,
+                                   java.util.function.Function<String, Boolean> isOnlineProvider) {
             this.unreadCounts = unreadCounts;
             this.displayNameProvider = displayNameProvider;
+            this.isOnlineProvider = isOnlineProvider;
         }
 
         @Override
@@ -440,16 +452,28 @@ public class ChatController {
             super.updateItem(item, empty);
             if (empty || item == null) {
                 setText(null);
+                getStyleClass().removeAll("user-online", "user-offline", "user-unread");
             } else {
                 String displayName = displayNameProvider.apply(item);
                 Integer unread = unreadCounts.get(item);
-                if (unread != null && unread > 0) {
-                    setText(displayName + " (" + unread + ")");
-                    getStyleClass().clear();
-                    getStyleClass().add("user-unread");
+                boolean isOnline = isOnlineProvider != null && Boolean.TRUE.equals(isOnlineProvider.apply(item));
+
+                String text = (unread != null && unread > 0)
+                        ? displayName + " (" + unread + ")"
+                        : displayName;
+                setText(text);
+
+                // Remove previous status classes, then add the correct one(s)
+                getStyleClass().removeAll("user-online", "user-offline", "user-unread");
+
+                if (isOnline) {
+                    getStyleClass().add("user-online");
                 } else {
-                    setText(displayName);
-                    getStyleClass().clear();
+                    getStyleClass().add("user-offline");
+                }
+
+                if (unread != null && unread > 0) {
+                    getStyleClass().add("user-unread");
                 }
             }
         }

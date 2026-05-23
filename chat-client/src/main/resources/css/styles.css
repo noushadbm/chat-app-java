@@ -212,6 +212,7 @@ BorderPane .message-bubble-other {
 .user-list .list-cell {
     -fx-padding: 5 8 5 8;
     -fx-background-color: transparent;
+    -fx-font-weight: bold;
 }
 
 .user-list .list-cell:hover {
@@ -226,6 +227,15 @@ BorderPane .message-bubble-other {
 
 .user-unread .text {
     -fx-strikethrough: false;
+}
+
+/* Online / Offline status in peer list */
+.user-online {
+    -fx-text-fill: #28a745; /* green */
+}
+
+.user-offline {
+    -fx-text-fill: #722f37; /* dark maroon */
 }
 
 /* Highlight selected user */
