@@ -74,6 +74,9 @@ public class ChatController {
     // Track which users are currently online (from server UserListMessage)
     private final java.util.Set<String> onlineUsernames = new java.util.HashSet<>();
 
+    // Timestamp when we successfully logged in (used to ignore historical P2P messages for unread counts)
+    private long loginTimestamp = 0;
+
     /**
      * Get display name for a username.
      */
@@ -117,6 +120,8 @@ public class ChatController {
         );
 
         System.out.println("Chat view initialized for: " + username);
+        this.loginTimestamp = System.currentTimeMillis();
+        unreadCounts.clear();
         addSystemMessageItem("Connected as " + username);
         updateChatTargetLabel();
 
@@ -138,6 +143,8 @@ public class ChatController {
         if (response.isSuccess()) {
             // Store display name
             this.displayName = response.getDisplayName();
+            this.loginTimestamp = System.currentTimeMillis();   // mark login time so we can ignore old history messages for unread counts
+            unreadCounts.clear();                               // start fresh for this session
             addSystemMessageItem("Connected to server as " + this.displayName);
             // User list will be received via UserListMessage
             users.clear();
@@ -171,8 +178,8 @@ public class ChatController {
 
             p2pList.add(item);
 
-            // Update unread count if not viewing this chat
-            if (!isForCurrentChat) {
+            // Update unread count only for *new* messages received after login (ignore historical P2P messages)
+            if (!isForCurrentChat && this.loginTimestamp > 0 && message.getTimestamp() >= this.loginTimestamp) {
                 int count = unreadCounts.getOrDefault(chatPartner, 0) + 1;
                 unreadCounts.put(chatPartner, count);
                 // Trigger UI update for user list
