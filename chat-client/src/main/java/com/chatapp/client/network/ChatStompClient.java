@@ -28,6 +28,7 @@ public class ChatStompClient implements StompSessionHandler {
     private Consumer<TextMessage> messageCallback;
     private Consumer<UserListMessage> userListCallback;
     private Consumer<SystemMessage> systemCallback;
+    private Consumer<FileMessage> fileCallback;
 
     public ChatStompClient(String serverUrl) {
         this.serverUrl = serverUrl;
@@ -37,13 +38,15 @@ public class ChatStompClient implements StompSessionHandler {
      * Set callbacks after connection is established.
      */
     public void setCallbacks(Consumer<LoginResponse> loginCallback,
-                             Consumer<TextMessage> messageCallback,
-                             Consumer<UserListMessage> userListCallback,
-                             Consumer<SystemMessage> systemCallback) {
+                              Consumer<TextMessage> messageCallback,
+                              Consumer<UserListMessage> userListCallback,
+                              Consumer<SystemMessage> systemCallback,
+                              Consumer<FileMessage> fileCallback) {
         this.loginCallback = loginCallback;
         this.messageCallback = messageCallback;
         this.userListCallback = userListCallback;
         this.systemCallback = systemCallback;
+        this.fileCallback = fileCallback;
     }
 
     /**
@@ -53,13 +56,15 @@ public class ChatStompClient implements StompSessionHandler {
                         Consumer<LoginResponse> loginCallback,
                         Consumer<TextMessage> messageCallback,
                         Consumer<UserListMessage> userListCallback,
-                        Consumer<SystemMessage> systemCallback) {
+                        Consumer<SystemMessage> systemCallback,
+                        Consumer<FileMessage> fileCallback) {
         this.username = username;
         this.password = password;
         this.loginCallback = loginCallback;
         this.messageCallback = messageCallback;
         this.userListCallback = userListCallback;
         this.systemCallback = systemCallback;
+        this.fileCallback = fileCallback;
 
         try {
             WebSocketClient webSocketClient = new StandardWebSocketClient();
@@ -176,6 +181,10 @@ public class ChatStompClient implements StompSessionHandler {
                     userListCallback.accept((UserListMessage) message);
                 } else if (message instanceof SystemMessage) {
                     systemCallback.accept((SystemMessage) message);
+                } else if (message instanceof FileMessage) {
+                    if (fileCallback != null) {
+                        fileCallback.accept((FileMessage) message);
+                    }
                 }
             });
         } catch (Exception e) {
@@ -225,5 +234,27 @@ public class ChatStompClient implements StompSessionHandler {
      */
     public boolean isConnected() {
         return stompSession != null && stompSession.isConnected();
+    }
+
+    /**
+     * Exposes the underlying StompSession for sending custom messages (e.g. FileMessage).
+     */
+    public StompSession getStompSession() {
+        return stompSession;
+    }
+
+    /**
+     * Convenience method to send any ChatMessage over the WebSocket.
+     */
+    public void sendChatMessage(com.chatapp.common.model.ChatMessage chatMessage) {
+        if (stompSession != null && stompSession.isConnected()) {
+            try {
+                String json = com.chatapp.common.MessageSerializer.serialize(chatMessage);
+                byte[] payload = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                stompSession.send("/app/chat", payload);
+            } catch (Exception e) {
+                System.err.println("Failed to send chat message: " + e.getMessage());
+            }
+        }
     }
 }

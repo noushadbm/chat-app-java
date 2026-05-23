@@ -282,6 +282,19 @@ BorderPane {
     -fx-background-color: #5558e0;
 }
 
+.attach-button {
+    -fx-background-color: #252529;
+    -fx-text-fill: #e2e2e7;
+    -fx-font-size: 14px;
+    -fx-padding: 6 8;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.attach-button:hover {
+    -fx-background-color: #3a3a3f;
+}
+
 /* ==================== GENERAL BUTTONS ==================== */
 .button {
     -fx-cursor: hand;
@@ -327,4 +340,48 @@ BorderPane {
 .user-list .list-cell:filled:selected:focused {
     -fx-background-color: #6366f1;
     -fx-text-fill: white;
+}
+
+/* ==================== FILE CARDS (Modern) ==================== */
+.file-card {
+    -fx-background-color: #2a2a2e;
+    -fx-background-radius: 10;
+    -fx-border-color: #3a3a3f;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0.1, 0, 1);
+}
+
+.file-card-own {
+    -fx-background-color: #3b3b40;
+}
+
+.file-name {
+    -fx-text-fill: #e2e2e7;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.file-size {
+    -fx-text-fill: #8a8a90;
+    -fx-font-size: 11px;
+}
+
+.file-sender {
+    -fx-text-fill: #a1a1a6;
+    -fx-font-size: 10px;
+    -fx-font-weight: 500;
+}
+
+.download-button {
+    -fx-background-color: #6366f1;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-padding: 4 10 4 10;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.download-button:hover {
+    -fx-background-color: #5558e0;
 }

@@ -3,10 +3,7 @@ package com.chatapp.client.controller;
 import com.chatapp.client.ChatClientApplication;
 import com.chatapp.client.model.MessageItem;
 import com.chatapp.client.network.ChatStompClient;
-import com.chatapp.common.model.LoginResponse;
-import com.chatapp.common.model.SystemMessage;
-import com.chatapp.common.model.TextMessage;
-import com.chatapp.common.model.UserListMessage;
+import com.chatapp.common.model.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -140,7 +137,8 @@ public class ChatController {
                 this::handleLoginResponse,
                 this::handleTextMessage,
                 this::handleUserListMessage,
-                this::handleSystemMessage
+                this::handleSystemMessage,
+                this::handleFileMessage
         );
 
         System.out.println("Chat view initialized for: " + username);
@@ -260,8 +258,60 @@ public class ChatController {
      * Handle system messages.
      */
     private void handleSystemMessage(SystemMessage message) {
-        addSystemMessageItem(message.getContent(), message.getTimestamp());
+        addSystemMessageItem(message.getContent());
         scrollToBottom();
+    }
+
+    private void handleFileMessage(FileMessage message) {
+        String sender = message.getSender();
+        String recipient = message.getRecipient();
+
+        boolean isP2P = recipient != null && !recipient.isEmpty();
+        String chatPartner = isP2P ? (sender.equals(username) ? recipient : sender) : null;
+
+        boolean isOwn = sender.equals(username);
+        String displaySender = isOwn ? "You" : getDisplayName(sender);
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+
+        // Create MessageItem for file (using extended constructor)
+        MessageItem fileItem = new MessageItem(
+                displaySender,
+                timestamp,
+                isOwn ? "file-own" : "file",
+                message.getFileId(),
+                message.getOriginalFilename(),
+                message.getSize(),
+                message.getContentType()
+        );
+
+        if (isP2P) {
+            // P2P File
+            boolean isForCurrentChat = chatPartner.equals(currentChatTarget);
+
+            ObservableList<MessageItem> p2pList = p2pMessages.computeIfAbsent(chatPartner,
+                    k -> FXCollections.observableArrayList());
+            p2pList.add(fileItem);
+
+            if (!isForCurrentChat) {
+                int count = unreadCounts.getOrDefault(chatPartner, 0) + 1;
+                unreadCounts.put(chatPartner, count);
+                userListView.refresh();
+            }
+
+            if (isForCurrentChat) {
+                addMessageToUI(fileItem);
+                scrollToBottom();
+            }
+        } else {
+            // Group File
+            groupMessages.add(fileItem);
+
+            if ("all".equals(currentChatTarget)) {
+                addMessageToUI(fileItem);
+                scrollToBottom();
+            }
+        }
     }
 
     /**
@@ -332,6 +382,9 @@ public class ChatController {
             systemLabel.getStyleClass().add("message-system");
             messageBubble.getChildren().add(systemLabel);
             messageContainer.getChildren().add(messageBubble);
+        } else if (item.getType() != null && item.getType().startsWith("file")) {
+            // File message card
+            addFileCard(item, messageContainer);
         } else {
             // Sender label
             Label senderLabel = new Label(item.getSender());
@@ -367,6 +420,94 @@ public class ChatController {
                 messageContainer.getChildren().add(container);
             }
         }
+    }
+
+    /**
+     * Render a nice file card for shared files.
+     */
+    private void addFileCard(MessageItem item, VBox container) {
+        VBox card = new VBox(4);
+        card.setPadding(new Insets(10, 14, 10, 14));
+        card.setMaxWidth(280);
+        card.getStyleClass().add("file-card");
+
+        Label nameLabel = new Label(item.getOriginalFilename());
+        nameLabel.setWrapText(true);
+        nameLabel.getStyleClass().add("file-name");
+
+        String sizeStr = formatFileSize(item.getFileSize());
+        Label sizeLabel = new Label(sizeStr);
+        sizeLabel.getStyleClass().add("file-size");
+
+        Button downloadBtn = new Button("⬇ Download");
+        downloadBtn.getStyleClass().add("download-button");
+        downloadBtn.setOnAction(e -> downloadFile(item.getFileId(), item.getOriginalFilename()));
+
+        card.getChildren().addAll(nameLabel, sizeLabel, downloadBtn);
+
+        // Sender info
+        if (item.getSender() != null && !item.getSender().isEmpty()) {
+            Label senderLabel = new Label(item.getSender());
+            senderLabel.getStyleClass().add("file-sender");
+            card.getChildren().add(0, senderLabel);
+        }
+
+        BorderPane wrapper = new BorderPane();
+        wrapper.setPadding(new Insets(4, 8, 4, 8));
+
+        boolean isOwn = "file-own".equals(item.getType());
+        if (isOwn) {
+            wrapper.setRight(card);
+            card.getStyleClass().add("file-card-own");
+        } else {
+            wrapper.setLeft(card);
+            card.getStyleClass().add("file-card-other");
+        }
+
+        container.getChildren().add(wrapper);
+    }
+
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024) + " KB";
+        return String.format("%.1f MB", bytes / (1024.0 * 1024));
+    }
+
+    private void downloadFile(String fileId, String filename) {
+        if (fileId == null) return;
+
+        String downloadUrl = "http://localhost:8080/api/files/download/" + fileId;
+
+        new Thread(() -> {
+            try {
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create(downloadUrl))
+                        .build();
+
+                java.net.http.HttpResponse<byte[]> response = client.send(request,
+                        java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+
+                if (response.statusCode() == 200) {
+                    Platform.runLater(() -> {
+                        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+                        chooser.setInitialFileName(filename);
+                        java.io.File saveFile = chooser.showSaveDialog(
+                                com.chatapp.client.ChatClientApplication.getPrimaryStage()
+                        );
+                        if (saveFile != null) {
+                            try {
+                                java.nio.file.Files.write(saveFile.toPath(), response.body());
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     /**
@@ -465,6 +606,115 @@ public class ChatController {
     @FXML
     private void handleBackToGroup() {
         switchToChat("all");
+    }
+
+    @FXML
+    private void handleAttachFile() {
+        if (stompClient == null || !stompClient.isConnected()) {
+            return;
+        }
+
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("Select file to share");
+        java.io.File selectedFile = fileChooser.showOpenDialog(
+                com.chatapp.client.ChatClientApplication.getPrimaryStage()
+        );
+
+        if (selectedFile != null) {
+            uploadAndShareFile(selectedFile);
+        }
+    }
+
+    private void uploadAndShareFile(java.io.File file) {
+        // TODO: Make HTTP base URL configurable (currently assumes same machine as WS)
+        String uploadUrl = "http://localhost:8080/api/files/upload";
+
+        new Thread(() -> {
+            try {
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create(uploadUrl))
+                        .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                        .header("username", username)
+                        .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(
+                                buildMultipartBody(file, boundary)
+                        ))
+                        .build();
+
+                java.net.http.HttpResponse<String> response = client.send(request,
+                        java.net.http.HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200) {
+                    String body = response.body();
+                    String fileId = extractJsonValue(body, "fileId");
+                    String filename = extractJsonValue(body, "filename");
+                    long size = Long.parseLong(extractJsonValue(body, "size").replaceAll("[^0-9]", ""));
+
+                    // Send FileMessage over WebSocket (real-time announcement)
+                    String recipient = "all".equals(currentChatTarget) ? null : currentChatTarget;
+
+                    com.chatapp.common.model.FileMessage fm = new com.chatapp.common.model.FileMessage(
+                            username, recipient, fileId, filename, size, "application/octet-stream"
+                    );
+
+                    stompClient.sendChatMessage(fm);
+
+                } else {
+                    System.err.println("File upload failed: HTTP " + response.statusCode());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    // Very basic JSON value extractor (for demo)
+    private String extractJsonValue(String json, String key) {
+        String search = "\"" + key + "\":\"";
+        int start = json.indexOf(search);
+        if (start == -1) {
+            search = "\"" + key + "\":";
+            start = json.indexOf(search);
+            if (start == -1) return "";
+            start += search.length();
+            int end = json.indexOf(',', start);
+            if (end == -1) end = json.indexOf('}', start);
+            return json.substring(start, end).trim().replace("\"", "");
+        }
+        start += search.length();
+        int end = json.indexOf('"', start);
+        return json.substring(start, end);
+    }
+
+    private byte[] buildMultipartBody(java.io.File file, String boundary) throws Exception {
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        java.io.PrintWriter writer = new java.io.PrintWriter(baos, true, java.nio.charset.StandardCharsets.UTF_8);
+
+        String CRLF = "\r\n";
+
+        // File part
+        writer.append("--").append(boundary).append(CRLF);
+        writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
+              .append(file.getName()).append("\"").append(CRLF);
+        writer.append("Content-Type: application/octet-stream").append(CRLF);
+        writer.append(CRLF).flush();
+
+        java.nio.file.Files.copy(file.toPath(), baos);
+        baos.flush();
+
+        writer.append(CRLF).flush();
+        writer.append("--").append(boundary).append("--").append(CRLF);
+        writer.flush();
+
+        return baos.toByteArray();
+    }
+
+    // Helper to get server base (placeholder)
+    private String serverUrlFromStomp() {
+        // TODO: Store the actual base HTTP URL when connecting
+        return "http://localhost:8080";
     }
 
     /**

@@ -2,10 +2,7 @@ package com.chatapp.client.controller;
 
 import com.chatapp.client.ChatClientApplication;
 import com.chatapp.client.network.ChatStompClient;
-import com.chatapp.common.model.LoginResponse;
-import com.chatapp.common.model.SystemMessage;
-import com.chatapp.common.model.TextMessage;
-import com.chatapp.common.model.UserListMessage;
+import com.chatapp.common.model.*;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.PasswordField;
@@ -54,7 +51,8 @@ public class LoginController {
             this::handleLoginResponse,
             this::handleTextMessage,
             this::handleUserListMessage,
-            this::handleSystemMessage
+            this::handleSystemMessage,
+            this::handleFileMessage   // dummy for now
         );
     }
 
@@ -86,6 +84,10 @@ public class LoginController {
 
     private void handleSystemMessage(SystemMessage message) {
         System.out.println("System: " + message.getContent());
+    }
+
+    private void handleFileMessage(FileMessage message) {
+        System.out.println("File received before login: " + message.getOriginalFilename());
     }
 
     private void showError(String message) {

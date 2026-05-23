@@ -2,6 +2,7 @@ package com.chatapp.server.websocket;
 
 import com.chatapp.common.MessageSerializer;
 import com.chatapp.common.model.*;
+import com.chatapp.server.service.FileService;
 import com.chatapp.server.service.MessageService;
 import com.chatapp.server.service.UserService;
 import org.slf4j.Logger;
@@ -25,6 +26,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.chatapp.common.model.FileMessage;
+
 /**
  * WebSocket handler for chat messages.
  */
@@ -35,6 +38,7 @@ public class ChatWebSocketHandler {
 
     private final UserService userService;
     private final MessageService messageService;
+    private final FileService fileService;
     private final SimpMessagingTemplate messagingTemplate;
     private final SimpUserRegistry userRegistry;
     private final Set<String> connectedUsers = ConcurrentHashMap.newKeySet();
@@ -42,10 +46,12 @@ public class ChatWebSocketHandler {
     private final Map<String, String> userSessions = new ConcurrentHashMap<>();
 
     public ChatWebSocketHandler(UserService userService, MessageService messageService,
-                                 SimpMessagingTemplate messagingTemplate,
-                                 SimpUserRegistry userRegistry) {
+                                  FileService fileService,
+                                  SimpMessagingTemplate messagingTemplate,
+                                  SimpUserRegistry userRegistry) {
         this.userService = userService;
         this.messageService = messageService;
+        this.fileService = fileService;
         this.messagingTemplate = messagingTemplate;
         this.userRegistry = userRegistry;
     }
@@ -60,6 +66,8 @@ public class ChatWebSocketHandler {
 
             if (message instanceof TextMessage textMessage) {
                 handleTextMessage(textMessage, headerAccessor);
+            } else if (message instanceof FileMessage fileMessage) {
+                handleFileMessage(fileMessage, headerAccessor);
             } else if (message instanceof LoginRequest loginRequest) {
                 handleLoginMessage(loginRequest, headerAccessor);
             }
@@ -96,6 +104,28 @@ public class ChatWebSocketHandler {
             // Broadcast to all users
             messagingTemplate.convertAndSend("/topic/messages", message);
             logger.info("Broadcast message from {}: {}", sender, message.getContent());
+        }
+    }
+
+    private void handleFileMessage(FileMessage message, SimpMessageHeaderAccessor headerAccessor) {
+        String sender = message.getSender();
+        String recipient = message.getRecipient();
+
+        // We do not save the file here — it was already uploaded via HTTP and stored by FileService.
+        // We only route the metadata message.
+
+        if (recipient != null && !recipient.isEmpty()) {
+            // P2P file
+            String recipientTopic = "/topic/user/" + recipient + "/messages";
+            String senderTopic = "/topic/user/" + sender + "/messages";
+
+            messagingTemplate.convertAndSend(recipientTopic, message);
+            messagingTemplate.convertAndSend(senderTopic, message);
+            logger.info("P2P file shared from {} to {}: {}", sender, recipient, message.getOriginalFilename());
+        } else {
+            // Group file
+            messagingTemplate.convertAndSend("/topic/messages", message);
+            logger.info("Group file shared by {}: {}", sender, message.getOriginalFilename());
         }
     }
 
@@ -203,6 +233,24 @@ public class ChatWebSocketHandler {
                 }
             }
             logger.debug("Sent {} messages to chat history for user {}", history.size(), username);
+
+            // Also send recent file shares
+            long since = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
+            List<com.chatapp.server.model.FileMetadata> recentFiles = fileService.getRecentFilesForUser(username, since);
+
+            for (com.chatapp.server.model.FileMetadata f : recentFiles) {
+                FileMessage fm = new FileMessage(
+                        f.getSender(),
+                        f.getRecipient(),
+                        f.getFileId(),
+                        f.getOriginalFilename(),
+                        f.getSize(),
+                        f.getContentType()
+                );
+                fm.setTimestamp(f.getTimestamp());
+                messagingTemplate.convertAndSend("/topic/user/" + username + "/history", fm);
+            }
+
         } catch (Exception e) {
             logger.error("Error sending chat history to user {}: {}", username, e.getMessage());
         }

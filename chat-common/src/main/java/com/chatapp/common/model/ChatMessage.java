@@ -19,7 +19,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(value = LoginRequest.class, name = "login"),
     @JsonSubTypes.Type(value = LoginResponse.class, name = "login_response"),
     @JsonSubTypes.Type(value = UserListMessage.class, name = "user_list"),
-    @JsonSubTypes.Type(value = SystemMessage.class, name = "system")
+    @JsonSubTypes.Type(value = SystemMessage.class, name = "system"),
+    @JsonSubTypes.Type(value = FileMessage.class, name = "file")
 })
 public abstract class ChatMessage {
 
