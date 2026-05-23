@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
@@ -103,5 +104,15 @@ public class FileController {
             this.size = size;
             this.contentType = contentType;
         }
+    }
+
+    /**
+     * Gracefully handle files that exceed the configured upload limit.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<String> handleMaxSizeException(MaxUploadSizeExceededException ex) {
+        return ResponseEntity
+                .status(413) // Payload Too Large
+                .body("File too large. Maximum allowed size is 50MB.");
     }
 }

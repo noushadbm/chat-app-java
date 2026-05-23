@@ -36,6 +36,12 @@
                            promptText="Type a message..." HBox.hgrow="ALWAYS"/>
                 <Button text="Send" onAction="#handleSend" styleClass="send-button" prefWidth="80"/>
             </HBox>
+
+            <!-- Upload Progress -->
+            <HBox fx:id="uploadStatusContainer" spacing="8" styleClass="upload-status" managed="false" visible="false">
+                <ProgressBar fx:id="uploadProgressBar" prefWidth="140" maxHeight="6"/>
+                <Label fx:id="uploadStatusLabel" text="Uploading..." styleClass="upload-status-label"/>
+            </HBox>
         </VBox>
 
         <!-- User List Sidebar -->

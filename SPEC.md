@@ -9,7 +9,7 @@ Chat Application
 Real-time messaging application with client-server architecture
 
 ### Core Functionality
-A multi-user chat application where users can connect via a JavaFX GUI client and exchange text messages in real-time through a Spring Boot WebSocket server.
+A multi-user chat application where users can connect via a JavaFX GUI client and exchange text messages and files (group + P2P) in real-time through a Spring Boot WebSocket + HTTP server.
 
 ### Target Users
 - Desktop users on Windows, macOS, or Linux
@@ -36,6 +36,7 @@ A multi-user chat application where users can connect via a JavaFX GUI client an
 | WebSocket Client | Spring STOMP | 6.1.6 |
 | JSON | Jackson | - |
 | Build Tool | Maven | - |
+| Theme | Modern Dark UI (Discord/Telegram-inspired) | - |
 
 ### Common Library
 | Component | Technology |
@@ -56,22 +57,25 @@ A multi-user chat application where users can connect via a JavaFX GUI client an
 **Classes:**
 - `ChatMessage` - Abstract base class with timestamp
 - `TextMessage` - Chat message with sender, content, recipient
+- `FileMessage` - File sharing metadata (fileId, filename, size, contentType)
 - `LoginRequest` - Client login credentials
 - `LoginResponse` - Server login response (success/failure)
-- `UserListMessage` - List of connected users
+- `UserListMessage` - List of connected users (with online status)
 - `SystemMessage` - System notifications (user joined/left)
 - `MessageSerializer` - Jackson JSON serialization utility
 
 **Message Format (JSON):**
 ```json
 {
-  "type": "text|login|login_response|user_list|system",
+  "type": "text|file|login|login_response|user_list|system",
   "timestamp": 1234567890,
   "sender": "username",
   "content": "message text",
   "recipient": "target_username",
-  "messageId": "unique_id",
-  "messageType": "text"
+  "fileId": "uuid-for-download",
+  "originalFilename": "report.pdf",
+  "size": 245760,
+  "contentType": "application/pdf"
 }
 ```
 
@@ -177,7 +181,7 @@ CREATE TABLE messages (
 
 ### 3.3 chat-client Module
 
-**Purpose:** JavaFX desktop GUI client
+**Purpose:** JavaFX desktop GUI client with modern dark theme UI
 
 **Package:** `com.chatapp.client`
 
@@ -259,10 +263,11 @@ CREATE TABLE messages (
 |---------|-------------|
 | Connect | Establish WebSocket connection |
 | Login | Authenticate with server |
-| Send Message | Broadcast text to all users |
-| Receive Message | Display incoming messages |
-| User List | Show connected users |
-| System Notifications | User join/leave messages |
+| Send Message | Send text or files (group or P2P) |
+| Receive Message | Display text and file cards with timestamps |
+| Timestamps | Messages show date + time (e.g. "May 23, 20:42") |
+| User List | Show connected users with online/offline status dots |
+| System Notifications | User join/leave messages (persisted in history) |
 | Disconnect | Clean connection shutdown |
 
 ### 4.4 Peer-to-Peer Chat (Client/Server)
@@ -273,6 +278,7 @@ CREATE TABLE messages (
 | P2P Messaging | Send private messages to specific user |
 | P2P Indicator | Header shows "Group Chat" or "Chat with: [username]" |
 | Unread Count | User list shows unread count in red bold (e.g., "user (3)") |
+| Online Status | Visual indicator (green dot = online, gray dot = offline) next to each peer |
 | Message Storage | P2P messages stored per conversation |
 | Back to Group | Button to return to broadcast chat |
 | Auto-switch | Incoming P2P messages shown if currently viewing that chat |
@@ -281,11 +287,11 @@ CREATE TABLE messages (
 
 | Feature | Description |
 |---------|-------------|
-| Message Storage | All messages (group and P2P) stored in SQLite |
-| Retention Period | Messages retained for 24 hours |
-| Auto Cleanup | Scheduled task deletes messages older than 24 hours |
-| Chat History | Users receive chat history on login via WebSocket |
-| REST API | Programmatic access to chat history |
+| Message Storage | All messages (group and P2P) + file metadata stored in SQLite |
+| Retention Period | Messages and files retained for 1 week |
+| Auto Cleanup | Scheduled task deletes messages and files older than 1 week |
+| Chat History | Users receive chat history (text + files) on login via WebSocket |
+| REST API | Programmatic access to chat history and file download |
 
 ### 4.6 Real-time Features
 
@@ -294,6 +300,21 @@ CREATE TABLE messages (
 | Live Updates | Instant message delivery |
 | Multi-user | Multiple clients connected simultaneously |
 | Auto-refresh | User list updates on connect/disconnect |
+| Online Status | Real-time green/gray dots indicating peer availability |
+
+### 4.7 File Sharing
+
+| Feature | Description |
+|---------|-------------|
+| File Upload | Attach and upload files (up to 50MB) via HTTP multipart |
+| Group & P2P Support | Files can be shared in both group chat and private 1:1 chats |
+| File Announcement | Lightweight `FileMessage` (metadata only) broadcast over WebSocket |
+| File Cards | Modern UI cards showing filename, size, sender, and Download button |
+| Upload Progress | Real-time progress bar + percentage during upload |
+| Error Handling | Clear feedback for size limits, network errors, etc. |
+| Secure Download | Files retrieved via HTTP `/api/files/download/{fileId}` |
+| Persistence | File metadata stored in database; files retained for 1 week |
+| History | Previously shared files appear in chat history on login |
 
 ---
 
@@ -391,23 +412,26 @@ spring:
 - [ ] SQLite database created automatically
 - [ ] Messages stored in SQLite database
 - [ ] Chat history sent to user on login
-- [ ] Old messages automatically deleted after 24 hours
+- [ ] Old messages and files automatically deleted after 1 week
 
 ### Client
 - [ ] Login screen displays on launch
 - [ ] Can connect to server with valid credentials
-- [ ] Chat view displays after successful login
-- [ ] Messages sent appear in chat
+- [ ] Chat view displays after successful login (modern dark theme)
+- [ ] Messages sent appear in chat with date + time
 - [ ] Messages from other users appear in real-time
-- [ ] User list shows connected users
+- [ ] User list shows online/offline status (green/gray dots)
+- [ ] File sharing works in group and P2P chats
+- [ ] Upload progress is shown during file uploads
+- [ ] File cards with download buttons are displayed
 - [ ] Disconnect button works
-- [ ] Chat history loads on login
+- [ ] Chat history (text + files) loads on login
 
 ### Integration
 - [ ] Multiple clients can connect simultaneously
-- [ ] Messages broadcast to all connected clients
-- [ ] User join/leave notifications work
-- [ ] P2P messages stored and retrievable
+- [ ] Messages and files broadcast to relevant users (group or P2P)
+- [ ] User join/leave notifications work and persist in history
+- [ ] P2P messages and files stored and retrievable
 
 ---
 

@@ -12,6 +12,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
@@ -41,6 +42,15 @@ public class ChatController {
 
     @FXML
     private TextField messageField;
+
+    @FXML
+    private HBox uploadStatusContainer;
+
+    @FXML
+    private ProgressBar uploadProgressBar;
+
+    @FXML
+    private Label uploadStatusLabel;
 
     @FXML
     private ListView<String> userListView;
@@ -123,6 +133,12 @@ public class ChatController {
         messageContainer.heightProperty().addListener((obs, oldVal, newVal) -> {
             scrollToBottom();
         });
+
+        // Hide upload progress by default
+        if (uploadStatusContainer != null) {
+            uploadStatusContainer.setManaged(false);
+            uploadStatusContainer.setVisible(false);
+        }
     }
 
     /**
@@ -621,38 +637,74 @@ public class ChatController {
         );
 
         if (selectedFile != null) {
+            // Client-side size check (50MB) - better UX
+            long maxSize = 50L * 1024 * 1024;
+            if (selectedFile.length() > maxSize) {
+                addSystemMessageItem("⚠ File is too large. Maximum allowed size is 50MB.");
+                return;
+            }
             uploadAndShareFile(selectedFile);
         }
     }
 
     private void uploadAndShareFile(java.io.File file) {
-        // TODO: Make HTTP base URL configurable (currently assumes same machine as WS)
         String uploadUrl = "http://localhost:8080/api/files/upload";
+
+        // Show progress UI
+        Platform.runLater(() -> {
+            if (uploadStatusContainer != null) {
+                uploadStatusContainer.setManaged(true);
+                uploadStatusContainer.setVisible(true);
+            }
+            if (uploadProgressBar != null) {
+                uploadProgressBar.setProgress(0);
+            }
+            if (uploadStatusLabel != null) {
+                uploadStatusLabel.setText("Uploading " + file.getName() + "...");
+            }
+        });
 
         new Thread(() -> {
             try {
                 java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
                 String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
 
+                // Build multipart body with progress tracking
+                byte[] bodyBytes = buildMultipartBodyWithProgress(file, boundary, (progress) -> {
+                    Platform.runLater(() -> {
+                        if (uploadProgressBar != null) {
+                            uploadProgressBar.setProgress(progress);
+                        }
+                        if (uploadStatusLabel != null) {
+                            uploadStatusLabel.setText(String.format("Uploading %s... %.0f%%", file.getName(), progress * 100));
+                        }
+                    });
+                });
+
                 java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                         .uri(java.net.URI.create(uploadUrl))
                         .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                         .header("username", username)
-                        .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(
-                                buildMultipartBody(file, boundary)
-                        ))
+                        .POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(bodyBytes))
                         .build();
 
                 java.net.http.HttpResponse<String> response = client.send(request,
                         java.net.http.HttpResponse.BodyHandlers.ofString());
 
+                Platform.runLater(() -> {
+                    if (uploadStatusContainer != null) {
+                        uploadStatusContainer.setManaged(false);
+                        uploadStatusContainer.setVisible(false);
+                    }
+                });
+
                 if (response.statusCode() == 200) {
                     String body = response.body();
                     String fileId = extractJsonValue(body, "fileId");
                     String filename = extractJsonValue(body, "filename");
-                    long size = Long.parseLong(extractJsonValue(body, "size").replaceAll("[^0-9]", ""));
+                    String sizeStr = extractJsonValue(body, "size").replaceAll("[^0-9]", "");
+                    long size = sizeStr.isEmpty() ? 0 : Long.parseLong(sizeStr);
 
-                    // Send FileMessage over WebSocket (real-time announcement)
                     String recipient = "all".equals(currentChatTarget) ? null : currentChatTarget;
 
                     com.chatapp.common.model.FileMessage fm = new com.chatapp.common.model.FileMessage(
@@ -662,9 +714,28 @@ public class ChatController {
                     stompClient.sendChatMessage(fm);
 
                 } else {
-                    System.err.println("File upload failed: HTTP " + response.statusCode());
+                    String errorBody = response.body();
+                    String errorMsg = "Upload failed (HTTP " + response.statusCode() + ")";
+                    if (errorBody != null && !errorBody.isBlank()) {
+                        errorMsg = errorBody;
+                    }
+                    final String finalError = errorMsg;
+                    Platform.runLater(() -> {
+                        addSystemMessageItem("⚠ " + finalError);
+                        if (uploadStatusLabel != null) {
+                            uploadStatusLabel.setText(finalError);
+                        }
+                    });
                 }
+
             } catch (Exception e) {
+                Platform.runLater(() -> {
+                    addSystemMessageItem("⚠ Upload error: " + e.getMessage());
+                    if (uploadStatusContainer != null) {
+                        uploadStatusContainer.setManaged(false);
+                        uploadStatusContainer.setVisible(false);
+                    }
+                });
                 e.printStackTrace();
             }
         }).start();
@@ -688,33 +759,49 @@ public class ChatController {
         return json.substring(start, end);
     }
 
-    private byte[] buildMultipartBody(java.io.File file, String boundary) throws Exception {
+    /**
+     * Builds multipart body while reporting upload progress.
+     */
+    private byte[] buildMultipartBodyWithProgress(java.io.File file, String boundary,
+                                                  java.util.function.Consumer<Double> progressCallback) throws Exception {
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         java.io.PrintWriter writer = new java.io.PrintWriter(baos, true, java.nio.charset.StandardCharsets.UTF_8);
 
         String CRLF = "\r\n";
+        long fileSize = file.length();
+        long totalBytes = 0;
 
-        // File part
+        // File part header
         writer.append("--").append(boundary).append(CRLF);
         writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
               .append(file.getName()).append("\"").append(CRLF);
         writer.append("Content-Type: application/octet-stream").append(CRLF);
         writer.append(CRLF).flush();
 
-        java.nio.file.Files.copy(file.toPath(), baos);
-        baos.flush();
+        // Stream file with progress
+        try (java.io.InputStream inputStream = new java.io.FileInputStream(file)) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                baos.write(buffer, 0, bytesRead);
+                totalBytes += bytesRead;
+
+                if (progressCallback != null && fileSize > 0) {
+                    double progress = Math.min(0.95, (double) totalBytes / fileSize); // cap at 95% until response
+                    progressCallback.accept(progress);
+                }
+            }
+        }
 
         writer.append(CRLF).flush();
         writer.append("--").append(boundary).append("--").append(CRLF);
         writer.flush();
 
-        return baos.toByteArray();
-    }
+        if (progressCallback != null) {
+            progressCallback.accept(1.0);
+        }
 
-    // Helper to get server base (placeholder)
-    private String serverUrlFromStomp() {
-        // TODO: Store the actual base HTTP URL when connecting
-        return "http://localhost:8080";
+        return baos.toByteArray();
     }
 
     /**
