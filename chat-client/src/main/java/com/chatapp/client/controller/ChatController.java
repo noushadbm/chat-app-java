@@ -27,7 +27,10 @@ import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
 import javafx.util.Duration;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -85,6 +88,25 @@ public class ChatController {
             return this.displayName != null ? this.displayName : username;
         }
         return userDisplayNames.getOrDefault(username, username);
+    }
+
+    /**
+     * Formats a message timestamp for display.
+     * Always shows date + time (e.g. "May 23, 20:42").
+     */
+    private String formatDisplayTime(long timestampMillis) {
+        LocalDateTime messageTime = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(timestampMillis),
+            ZoneId.systemDefault()
+        );
+        LocalDate messageDate = messageTime.toLocalDate();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
+
+        if (messageDate.getYear() == today.getYear()) {
+            return messageTime.format(DateTimeFormatter.ofPattern("MMM d, HH:mm"));
+        } else {
+            return messageTime.format(DateTimeFormatter.ofPattern("MMM d yyyy, HH:mm"));
+        }
     }
 
     @FXML
@@ -172,9 +194,9 @@ public class ChatController {
                     k -> FXCollections.observableArrayList());
 
             String type = sender.equals(username) ? "own" : "text";
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+            String timeStr = formatDisplayTime(message.getTimestamp());
             String senderDisplayName = sender.equals(username) ? "You" : getDisplayName(sender);
-            MessageItem item = new MessageItem(senderDisplayName, message.getContent(), timestamp, type);
+            MessageItem item = new MessageItem(senderDisplayName, message.getContent(), timeStr, type);
 
             p2pList.add(item);
 
@@ -194,9 +216,9 @@ public class ChatController {
         } else {
             // Broadcast message
             String type = sender.equals(username) ? "own" : "text";
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+            String timeStr = formatDisplayTime(message.getTimestamp());
             String senderDisplayName = getDisplayName(sender);
-            MessageItem item = new MessageItem(senderDisplayName, message.getContent(), timestamp, type);
+            MessageItem item = new MessageItem(senderDisplayName, message.getContent(), timeStr, type);
             groupMessages.add(item);
 
             // Only show in UI if currently viewing group chat
@@ -236,7 +258,7 @@ public class ChatController {
      * Handle system messages.
      */
     private void handleSystemMessage(SystemMessage message) {
-        addSystemMessageItem(message.getContent());
+        addSystemMessageItem(message.getContent(), message.getTimestamp());
         scrollToBottom();
     }
 
@@ -346,11 +368,18 @@ public class ChatController {
     }
 
     /**
-     * Add a system message to the UI.
+     * Add a system message to the UI (uses current time).
      */
     private void addSystemMessageItem(String content) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-        MessageItem item = new MessageItem("System", content, timestamp, "system");
+        addSystemMessageItem(content, System.currentTimeMillis());
+    }
+
+    /**
+     * Add a system message to the UI with a specific timestamp.
+     */
+    private void addSystemMessageItem(String content, long timestampMillis) {
+        String timeStr = formatDisplayTime(timestampMillis);
+        MessageItem item = new MessageItem("System", content, timeStr, "system");
 
         // System messages are part of the group chat history (like broadcast text messages)
         groupMessages.add(item);
