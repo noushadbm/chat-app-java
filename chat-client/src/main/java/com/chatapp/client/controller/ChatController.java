@@ -22,6 +22,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.application.Platform;
 import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
@@ -493,31 +495,44 @@ public class ChatController {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
+
             if (empty || item == null) {
                 setText(null);
-                getStyleClass().removeAll("user-online", "user-offline", "user-unread");
+                setGraphic(null);
             } else {
                 String displayName = displayNameProvider.apply(item);
                 Integer unread = unreadCounts.get(item);
                 boolean isOnline = isOnlineProvider != null && Boolean.TRUE.equals(isOnlineProvider.apply(item));
 
-                String text = (unread != null && unread > 0)
+                // Status dot (green = online, gray = offline)
+                Circle statusDot = new Circle(4.5);
+                statusDot.setFill(isOnline ? Color.web("#22c55e") : Color.web("#6b7280"));
+                statusDot.setStroke(Color.web("#0f0f12"));   // subtle border for visibility
+                statusDot.setStrokeWidth(0.8);
+
+                // Name label (with optional unread count)
+                String labelText = (unread != null && unread > 0)
                         ? displayName + " (" + unread + ")"
                         : displayName;
-                setText(text);
 
-                // Remove previous status classes, then add the correct one(s)
-                getStyleClass().removeAll("user-online", "user-offline", "user-unread");
+                Label nameLabel = new Label(labelText);
 
-                if (isOnline) {
-                    getStyleClass().add("user-online");
+                // Handle selection color properly with custom graphic
+                if (isSelected()) {
+                    nameLabel.setTextFill(Color.WHITE);
+                } else if (unread != null && unread > 0) {
+                    nameLabel.setTextFill(Color.web("#f87171"));
                 } else {
-                    getStyleClass().add("user-offline");
+                    nameLabel.setTextFill(Color.web("#e2e2e7"));
                 }
 
-                if (unread != null && unread > 0) {
-                    getStyleClass().add("user-unread");
-                }
+                nameLabel.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.NORMAL, 13));
+
+                HBox container = new HBox(8, statusDot, nameLabel);
+                container.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+                setText(null);
+                setGraphic(container);
             }
         }
     }

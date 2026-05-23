@@ -1,139 +1,180 @@
-/* Chat Client Styles */
+/* ============================================
+   MODERN DARK THEME - Chat Application
+   Inspired by Discord / Telegram Desktop
+   ============================================ */
 
-/* Login Container */
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", "San Francisco", sans-serif;
+    -fx-font-size: 13px;
+}
+
+/* ==================== LOGIN SCREEN ==================== */
 .login-container {
-    -fx-background-color: #f5f5f5;
+    -fx-background-color: #0f0f12;
 }
 
 .login-container .title {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #333;
-    -fx-padding: 0 0 20 0;
+    -fx-font-size: 28px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #e2e2e7;
+    -fx-padding: 0 0 32 0;
+}
+
+.login-container .label {
+    -fx-text-fill: #a1a1a6;
+    -fx-font-size: 13px;
+}
+
+.login-container TextField,
+.login-container PasswordField {
+    -fx-background-color: #1f1f23;
+    -fx-text-fill: #e2e2e7;
+    -fx-prompt-text-fill: #6b6b70;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-color: #2f2f33;
+    -fx-border-width: 1;
+    -fx-padding: 8 12;
+    -fx-font-size: 14px;
+}
+
+.login-container TextField:focused,
+.login-container PasswordField:focused {
+    -fx-border-color: #6366f1;
+    -fx-border-width: 1.5;
 }
 
 .login-container .primary-button {
-    -fx-background-color: #007bff;
+    -fx-background-color: #6366f1;
     -fx-text-fill: white;
     -fx-font-size: 14px;
-    -fx-padding: 8 20 8 20;
+    -fx-font-weight: 600;
+    -fx-padding: 10 32 10 32;
+    -fx-background-radius: 8;
     -fx-cursor: hand;
 }
 
 .login-container .primary-button:hover {
-    -fx-background-color: #0056b3;
+    -fx-background-color: #5558e0;
 }
 
-/* Chat Container */
+/* ==================== MAIN CHAT ==================== */
 .chat-container {
-    -fx-background-color: #fff;
+    -fx-background-color: #0f0f12;
+}
+
+/* ==================== SIDEBAR ==================== */
+.sidebar {
+    -fx-background-color: #16161a;
+    -fx-border-color: #2a2a2e;
+    -fx-border-width: 0 1 0 0;
+}
+
+.sidebar-title {
+    -fx-text-fill: #8a8a90;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-padding: 4 0 2 0;
+    -fx-letter-spacing: 0.5px;
+}
+
+.hint-label {
+    -fx-text-fill: #5a5a5f;
+    -fx-font-size: 10px;
+    -fx-font-style: italic;
+}
+
+/* User List */
+.user-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.user-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 8 12 8 12;
+    -fx-text-fill: #d1d1d6;
+    -fx-background-radius: 6;
+    -fx-font-weight: normal;
+}
+
+.user-list .list-cell:hover {
+    -fx-background-color: #252529;
+}
+
+.user-list .list-cell:selected {
+    -fx-background-color: #6366f1;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+}
+
+/* Online / Offline */
+.user-online {
+    -fx-text-fill: #22c55e;
+}
+
+.user-offline {
+    -fx-text-fill: #6b7280;
+}
+
+.user-unread {
+    -fx-text-fill: #f87171;
+    -fx-font-weight: bold;
+}
+
+/* ==================== CHAT AREA ==================== */
+.chat-header {
+    -fx-background-color: #1c1c1f;
+    -fx-padding: 12 16 12 16;
+    -fx-border-color: #2a2a2e;
+    -fx-border-width: 0 0 1 0;
+    -fx-alignment: center-left;
+}
+
+.chat-target-label {
+    -fx-text-fill: #e2e2e7;
+    -fx-font-size: 15px;
+    -fx-font-weight: 600;
+}
+
+.back-button {
+    -fx-background-color: #252529;
+    -fx-text-fill: #d1d1d6;
+    -fx-font-size: 12px;
+    -fx-padding: 4 10 4 10;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.back-button:hover {
+    -fx-background-color: #2f2f33;
 }
 
 /* Message Area */
 .message-scroll-pane {
-    -fx-background-color: #f5f5f5;
-    -fx-border-color: #e0e0e0;
-    -fx-border-width: 1;
+    -fx-background-color: #1c1c1f;
+    -fx-border-color: transparent;
 }
 
 .message-scroll-pane .scroll-bar:vertical {
-    -fx-pref-width: 10;
-}
-
-.message-container {
-    -fx-background-color: #f5f5f5;
-    -fx-padding: 10;
-}
-
-/* Message Bubbles */
-.message-container {
-    -fx-background-color: #f5f5f5;
-    -fx-padding: 10;
-}
-
-.message-bubble {
-    -fx-background-radius: 15;
-    -fx-border-radius: 15;
-    -fx-padding: 8 12 8 12;
-    -fx-max-width: 400;
-    -fx-alignment: top-left;
-}
-
-.message-bubble-own {
-    -fx-background-color: #007bff;
-    -fx-text-fill: white;
-}
-
-.message-bubble-own .message-sender {
-    -fx-text-fill: #e6f0ff;
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-}
-
-.message-bubble-own .message-content {
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
-}
-
-.message-bubble-own .message-time {
-    -fx-text-fill: #cce0ff;
-    -fx-font-size: 10px;
-    -fx-alignment: bottom-right;
-}
-
-.message-bubble-other {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #ddd;
-    -fx-border-width: 1;
-}
-
-.message-bubble-other .message-sender {
-    -fx-text-fill: #333;
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-}
-
-.message-bubble-other .message-content {
-    -fx-text-fill: #333;
-    -fx-font-size: 14px;
-}
-
-.message-bubble-other .message-time {
-    -fx-text-fill: #888;
-    -fx-font-size: 10px;
-    -fx-alignment: bottom-right;
-}
-
-.message-bubble-system {
+    -fx-pref-width: 8;
     -fx-background-color: transparent;
 }
 
-.message-bubble-system .label {
-    -fx-text-fill: #888;
-    -fx-font-size: 12px;
-    -fx-font-style: italic;
+.message-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #3a3a3f;
+    -fx-background-radius: 4;
 }
 
-/* StackPane and BorderPane for aligned messages */
-StackPane, BorderPane {
-    -fx-background-color: #f5f5f5;
+.message-container {
+    -fx-background-color: #1c1c1f;
+    -fx-padding: 12 20 12 20;
 }
 
-BorderPane {
-    -fx-padding: 5 10 5 10;
-}
-
-BorderPane .message-bubble-own {
-    -fx-alignment: center-right;
-}
-
-BorderPane .message-bubble-other {
-    -fx-alignment: center-left;
-}
-
+/* ==================== MESSAGE BUBBLES - MODERN ==================== */
 .message-sender {
     -fx-font-size: 11px;
-    -fx-font-weight: bold;
+    -fx-font-weight: 600;
 }
 
 .message-content {
@@ -142,151 +183,148 @@ BorderPane .message-bubble-other {
 
 .message-time {
     -fx-font-size: 10px;
-    -fx-text-fill: #888;
 }
 
-/* Input Area */
-.input-area {
-    -fx-background-color: #f0f0f0;
-    -fx-padding: 10;
-    -fx-spacing: 10;
+/* Own messages (right side) */
+.message-bubble-own {
+    -fx-background-color: #6366f1;
+    -fx-background-radius: 18 18 4 18;
+    -fx-padding: 9 14 9 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 6, 0.2, 0, 2);
 }
 
-.input-area TextField {
-    -fx-background-color: white;
-    -fx-border-color: #ccc;
-    -fx-border-width: 1;
-    -fx-padding: 8;
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
+.message-bubble-own .message-sender {
+    -fx-text-fill: #c7c7ff;
 }
 
-.input-area TextField:focused {
-    -fx-border-color: #007bff;
-}
-
-.send-button {
-    -fx-background-color: #007bff;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
-    -fx-padding: 8 16 8 16;
-    -fx-cursor: hand;
-    -fx-background-radius: 4;
-}
-
-.send-button:hover {
-    -fx-background-color: #0056b3;
-}
-
-/* Sidebar */
-.sidebar {
-    -fx-background-color: #f8f9fa;
-    -fx-border-color: #e0e0e0;
-    -fx-border-width: 0 0 0 1;
-}
-
-.chat-header {
-    -fx-background-color: #e9ecef;
-    -fx-padding: 8 10 8 10;
-    -fx-alignment: center-left;
-}
-
-.chat-header .chat-target-label {
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #333;
-}
-
-.sidebar-title {
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #555;
-    -fx-padding: 0 0 10 0;
-}
-
-.user-list {
-    -fx-background-color: transparent;
-    -fx-border: none;
-}
-
-.user-list .list-cell {
-    -fx-padding: 5 8 5 8;
-    -fx-background-color: transparent;
-    -fx-font-weight: bold;
-}
-
-.user-list .list-cell:hover {
-    -fx-background-color: #e9ecef;
-}
-
-.user-unread {
-    -fx-text-fill: #dc3545;
-    -fx-font-weight: bold;
-    -fx-font-size: 14px;
-}
-
-.user-unread .text {
-    -fx-strikethrough: false;
-}
-
-/* Online / Offline status in peer list */
-.user-online {
-    -fx-text-fill: #28a745; /* green */
-}
-
-.user-offline {
-    -fx-text-fill: #722f37; /* dark maroon */
-}
-
-/* Highlight selected user */
-.user-list .list-cell:selected {
-    -fx-background-color: #007bff;
+.message-bubble-own .message-content {
     -fx-text-fill: white;
 }
 
-.hint-label {
-    -fx-font-size: 10px;
-    -fx-text-fill: #888;
+.message-bubble-own .message-time {
+    -fx-text-fill: #c7c7ff;
+}
+
+/* Other messages (left side) */
+.message-bubble-other {
+    -fx-background-color: #2a2a2e;
+    -fx-background-radius: 4 18 18 18;
+    -fx-padding: 9 14 9 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 5, 0.15, 0, 1);
+}
+
+.message-bubble-other .message-sender {
+    -fx-text-fill: #a1a1a6;
+}
+
+.message-bubble-other .message-content {
+    -fx-text-fill: #e2e2e7;
+}
+
+.message-bubble-other .message-time {
+    -fx-text-fill: #6b6b70;
+}
+
+/* System messages */
+.message-bubble-system {
+    -fx-background-color: transparent;
+    -fx-padding: 4 0;
+}
+
+.message-bubble-system .label {
+    -fx-text-fill: #6b6b70;
+    -fx-font-size: 12px;
     -fx-font-style: italic;
 }
 
-.chat-target-label {
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #333;
+/* Container for alignment */
+BorderPane {
+    -fx-background-color: transparent;
+    -fx-padding: 2 8;
 }
 
-.back-button {
-    -fx-background-color: #6c757d;
+/* ==================== INPUT AREA ==================== */
+.input-area {
+    -fx-background-color: #1c1c1f;
+    -fx-padding: 12 16 16 16;
+    -fx-border-color: #2a2a2e;
+    -fx-border-width: 1 0 0 0;
+}
+
+.input-area TextField {
+    -fx-background-color: #252529;
+    -fx-text-fill: #e2e2e7;
+    -fx-prompt-text-fill: #6b6b70;
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-border-color: transparent;
+    -fx-padding: 10 16;
+    -fx-font-size: 14px;
+}
+
+.input-area TextField:focused {
+    -fx-border-color: #6366f1;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 20;
+}
+
+.send-button {
+    -fx-background-color: #6366f1;
     -fx-text-fill: white;
-    -fx-font-size: 12px;
-    -fx-padding: 4 8 4 8;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-padding: 10 20;
+    -fx-background-radius: 20;
     -fx-cursor: hand;
-    -fx-background-radius: 4;
 }
 
-.back-button:hover {
-    -fx-background-color: #545b62;
+.send-button:hover {
+    -fx-background-color: #5558e0;
 }
 
-.disconnect-button {
-    -fx-background-color: #dc3545;
-    -fx-text-fill: white;
-    -fx-font-size: 12px;
-    -fx-padding: 6 12 6 12;
-    -fx-cursor: hand;
-    -fx-background-radius: 4;
-}
-
-.disconnect-button:hover {
-    -fx-background-color: #c82333;
-}
-
-/* General */
+/* ==================== GENERAL BUTTONS ==================== */
 .button {
     -fx-cursor: hand;
 }
 
+.disconnect-button {
+    -fx-background-color: #3a3a3f;
+    -fx-text-fill: #d1d1d6;
+    -fx-font-size: 12px;
+    -fx-padding: 6 14 6 14;
+    -fx-background-radius: 6;
+}
+
+.disconnect-button:hover {
+    -fx-background-color: #dc3545;
+    -fx-text-fill: white;
+}
+
+/* ==================== LABELS ==================== */
 .label {
-    -fx-text-fill: #555;
+    -fx-text-fill: #d1d1d6;
+}
+
+/* ==================== SPLITPANE (modern divider) ==================== */
+.split-pane {
+    -fx-background-color: #0f0f12;
+}
+
+.split-pane > .split-pane-divider {
+    -fx-background-color: #2a2a2e;
+    -fx-padding: 0 1 0 1;
+}
+
+.split-pane > .split-pane-divider:hover {
+    -fx-background-color: #3a3a3f;
+}
+
+/* ==================== LISTVIEW SELECTION & FOCUS ==================== */
+.user-list:focused {
+    -fx-background-color: transparent;
+}
+
+.user-list .list-cell:filled:selected:focused {
+    -fx-background-color: #6366f1;
+    -fx-text-fill: white;
 }
