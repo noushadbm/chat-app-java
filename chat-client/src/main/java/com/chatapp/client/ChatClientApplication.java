@@ -6,7 +6,11 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Main JavaFX Application for the Chat Client.
@@ -18,6 +22,7 @@ public class ChatClientApplication extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         primaryStage = stage;
+        setAppIcons(primaryStage);
         showLoginView();
     }
 
@@ -35,6 +40,7 @@ public class ChatClientApplication extends Application {
             primaryStage.setTitle("Chat Client - Login");
             primaryStage.setScene(scene);
             primaryStage.setResizable(false);
+            setAppIcons(primaryStage);
             primaryStage.show();
         } catch (Exception e) {
             e.printStackTrace();
@@ -61,6 +67,7 @@ public class ChatClientApplication extends Application {
             primaryStage.setResizable(true);
             primaryStage.setMinWidth(600);
             primaryStage.setMinHeight(400);
+            setAppIcons(primaryStage);
             primaryStage.show();
         } catch (Exception e) {
             e.printStackTrace();
@@ -86,6 +93,33 @@ public class ChatClientApplication extends Application {
 
     public static Stage getPrimaryStage() {
         return primaryStage;
+    }
+
+    /**
+     * Sets modern app icons for the stage.
+     * Expects icon files in src/main/resources/icons/
+     */
+    private static void setAppIcons(Stage stage) {
+        List<Image> icons = new ArrayList<>();
+
+        // Recommended sizes for best cross-platform results
+        String[] sizes = {"16", "32", "64", "128", "256"};
+
+        for (String size : sizes) {
+            try {
+                String path = "/icons/chat-icon-" + size + ".png";
+                Image icon = new Image(ChatClientApplication.class.getResourceAsStream(path));
+                if (!icon.isError()) {
+                    icons.add(icon);
+                }
+            } catch (Exception ignored) {
+                // Icon not found — will fall back to default
+            }
+        }
+
+        if (!icons.isEmpty()) {
+            stage.getIcons().setAll(icons);
+        }
     }
 
     public static void main(String[] args) {
