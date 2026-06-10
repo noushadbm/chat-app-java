@@ -19,6 +19,12 @@ RUN mvn -f pom.xml package -DskipTests -am -pl chat-server
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+ENV CHAT_DB_URL=jdbc:sqlite:/data/chat-server.db
+ENV FILE_UPLOAD_DIR=/data/uploads
+
+RUN mkdir -p /data/uploads
+VOLUME ["/data"]
+
 # Copy the built jar from the builder stage
 COPY --from=builder /app/chat-server/target/chat-server-1.0.0-SNAPSHOT.jar app.jar
 

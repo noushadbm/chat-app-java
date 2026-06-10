@@ -2,7 +2,7 @@ spring:
   application:
     name: chat-server
   datasource:
-    url: jdbc:sqlite:chat-server.db
+    url: ${CHAT_DB_URL:jdbc:sqlite:chat-server.db}
     driver-class-name: org.sqlite.JDBC
   jpa:
     hibernate:
@@ -21,6 +21,9 @@ spring:
 server:
   port: 8080
   address: 0.0.0.0
+
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:uploads}
 
 logging:
   level:
